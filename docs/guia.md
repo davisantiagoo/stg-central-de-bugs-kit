@@ -37,10 +37,10 @@ Este bloco é o **único lugar do guia** com a versão. Cole-o no terminal antes
 trocar de versão, troque só ele.
 
 ```bash
-# Versão atual dos pacotes da Central de Bugs: 0.1.0 (Release pacotes-v0.1.0)
-CDB_WIDGET=https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.1.0/stg-central-de-bugs-0.1.0.tgz
-CDB_FASTIFY=https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.1.0/stg-central-de-bugs-fastify-0.1.0.tgz
-CDB_CLI=https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.1.0/stg-central-de-bugs-cli-0.1.0.tgz
+# Versão atual dos pacotes da Central de Bugs: 0.2.0 (Release pacotes-v0.2.0)
+CDB_WIDGET=https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.2.0/stg-central-de-bugs-0.2.0.tgz
+CDB_FASTIFY=https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.2.0/stg-central-de-bugs-fastify-0.2.0.tgz
+CDB_CLI=https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.2.0/stg-central-de-bugs-cli-0.2.0.tgz
 ```
 
 | Variável | Pacote | O que é |
@@ -204,7 +204,7 @@ const CENTRAL = import.meta.env.VITE_CENTRAL_DE_BUGS_URL
 | `central` | sim | `https://app.stgcompany.com.br` (ou o simulador, em dev) |
 | `token` | sim | `() => Promise<string>`: busca o JWT na rota do plugin |
 | `contexto` | — | `() => Record<string, ValorContexto>`, lido no momento do relato |
-| `perguntas` | — | até 8 perguntas extras no formulário |
+| `perguntas` | — | até 8 perguntas extras no formulário; opções podem ter ícone (veja abaixo) |
 | `versao` | — | versão ou SHA do build (um SHA vira os 12 primeiros caracteres) |
 | `tela` | — | `() => string`, o nome legível da tela ("Pedidos › #812"). Padrão: o título da página |
 | `raizDoPrint` | — | `() => HTMLElement \| null`, o elemento fotografado. Padrão: o `body` |
@@ -220,6 +220,48 @@ itens. Chave em camelCase é convertida com aviso no console. Com `sensivel: tru
 
 **Perguntas** (`PerguntaExtra`):
 `{ chave, rotulo, tipo: 'texto' | 'opcao' | 'numero' | 'sim_nao', opcoes?, obrigatoria?, so_em?: 'bug' | 'sugestao', ajuda? }`.
+
+`opcoes` (obrigatório em `tipo: 'opcao'`) aceita texto ou objeto, misturados
+(`OpcaoDaPergunta`, desde a 0.2.0):
+
+- texto, como antes: `'Matriz'` é o valor e o rótulo ao mesmo tempo;
+- `{ valor, rotulo?, icone?, descricao? }`: `valor` (texto, único na pergunta) é o que vai
+  gravado na resposta; `rotulo` é o que a pessoa lê (padrão: o `valor`); `icone` é um nó React
+  qualquer, normalmente um ícone que o SaaS já usa; `descricao` é uma linha discreta embaixo do
+  rótulo, no seletor.
+
+Até 6 opções viram pílulas (com o ícone, se houver). Mais que 6 viram um seletor do próprio
+widget: campo com o ícone e o rótulo escolhidos, lista com ícone e descrição, busca a partir de
+9 opções, teclado completo (setas, Home/End, Enter, Esc, digitar para pular) e tema
+claro/escuro. A resposta gravada na Central é sempre o `valor`, nunca o rótulo.
+
+O widget não traz biblioteca de ícones nem baixa nada: o ícone é do SaaS. Use o mesmo pacote
+de ícones do seu front (lucide-react, heroicons, um `<svg>` seu), com ~14–16px e
+`currentColor`, para o ícone seguir o tema do widget. Ele é decorativo: o leitor de tela lê o
+`rotulo`.
+
+```tsx
+import { Bike, Store, Truck } from 'lucide-react' // o pacote de ícones do próprio SaaS
+import type { PerguntaExtra } from '@stg/central-de-bugs'
+
+const PERGUNTAS: PerguntaExtra[] = [
+  {
+    chave: 'entrega',
+    rotulo: 'Como o pedido chega ao cliente?',
+    tipo: 'opcao',
+    so_em: 'bug',
+    opcoes: [
+      { valor: 'transportadora', rotulo: 'Transportadora', icone: <Truck size={15} />, descricao: 'Correios ou frete contratado' },
+      { valor: 'motoboy', rotulo: 'Motoboy', icone: <Bike size={15} /> },
+      { valor: 'retirada', rotulo: 'Retirada na loja', icone: <Store size={15} /> },
+      'Outro', // texto continua valendo
+    ],
+  },
+]
+```
+
+Mudar só o ícone (por exemplo, com o tema do SaaS) não refaz a validação das perguntas: o
+widget compara a estrutura sem os ícones e usa sempre os ícones do render atual.
 
 **Eventos do domínio:** `registrar(nome, detalhes?)` guarda os últimos 30, com até 10 detalhes
 planos cada. Eles entram em "Últimos eventos" dos relatos de **bug**.

@@ -96,15 +96,15 @@ chave privada iria para o navegador e proponha a correção antes de qualquer ou
 
 ## Passo 2 — Instalar os pacotes
 
-Os pacotes são `.tgz` públicos, anexados ao Release `pacotes-v0.1.0` do repositório
+Os pacotes são `.tgz` públicos, anexados ao Release `pacotes-v0.2.0` do repositório
 `davisantiagoo/stg-central-de-bugs-kit`. Instalam pela URL, **sem token, sem `.npmrc` e sem
 registry**. Versão atual e URLs (as mesmas do `docs/guia.md` do kit, passo 1):
 
 | Pacote | Onde | URL |
 | --- | --- | --- |
-| `@stg/central-de-bugs` | front | `https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.1.0/stg-central-de-bugs-0.1.0.tgz` |
-| `@stg/central-de-bugs-fastify` | servidor | `https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.1.0/stg-central-de-bugs-fastify-0.1.0.tgz` |
-| `@stg/central-de-bugs-cli` | dev (devDependency) | `https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.1.0/stg-central-de-bugs-cli-0.1.0.tgz` |
+| `@stg/central-de-bugs` | front | `https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.2.0/stg-central-de-bugs-0.2.0.tgz` |
+| `@stg/central-de-bugs-fastify` | servidor | `https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.2.0/stg-central-de-bugs-fastify-0.2.0.tgz` |
+| `@stg/central-de-bugs-cli` | dev (devDependency) | `https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.2.0/stg-central-de-bugs-cli-0.2.0.tgz` |
 
 Instale **os três agora**, antes de qualquer outro passo: a CLI gera as chaves no Passo 5 e
 sobe o simulador no Passo 12, e todos os comandos `npx central-de-bugs …` desta skill usam a
@@ -114,11 +114,11 @@ cópia instalada no repositório.
 
    ```bash
    # no workspace do front
-   npm install https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.1.0/stg-central-de-bugs-0.1.0.tgz
+   npm install https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.2.0/stg-central-de-bugs-0.2.0.tgz
    # no workspace do servidor
-   npm install https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.1.0/stg-central-de-bugs-fastify-0.1.0.tgz
+   npm install https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.2.0/stg-central-de-bugs-fastify-0.2.0.tgz
    # onde fica mais à mão, normalmente na raiz ou no servidor
-   npm install -D https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.1.0/stg-central-de-bugs-cli-0.1.0.tgz
+   npm install -D https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.2.0/stg-central-de-bugs-cli-0.2.0.tgz
    ```
 
    Num repositório de um pacote só (front e servidor juntos), junte os dois primeiros:
@@ -433,6 +433,34 @@ registrar('importacao concluida', { arquivo_linhas: linhas, erros: falhas })
 **`perguntas`**, opcional e com parcimônia: no máximo 1 ou 2, e só se a resposta não puder ser
 lida do código. Formato:
 `{ chave, rotulo, tipo: 'texto' | 'opcao' | 'numero' | 'sim_nao', opcoes?, obrigatoria?, so_em?: 'bug' | 'sugestao', ajuda? }`.
+
+Em `tipo: 'opcao'`, cada item de `opcoes` é texto (`'Matriz'`) ou
+`{ valor, rotulo?, icone?, descricao? }` (pacotes 0.2.0+). O que vai gravado é sempre o
+`valor` (texto, único); `rotulo` é o que a pessoa lê; `icone` é um nó React; `descricao` é uma
+linha menor no seletor. Até 6 opções viram pílulas, mais que isso um seletor com busca (a
+partir de 9). Quando o SaaS já usa um pacote de ícones (veja o `package.json` do front:
+`lucide-react`, `@heroicons/react`…), proponha ícones **desse** pacote, ~15px, sem cor fixa
+(o widget pinta com `currentColor`). Nunca instale um pacote de ícones só para isso; sem um,
+deixe as opções sem ícone. Exemplo com lucide-react:
+
+```tsx
+import { Bike, Store, Truck } from 'lucide-react'
+
+perguntas={[{
+  chave: 'entrega',
+  rotulo: 'Como o pedido chega ao cliente?',
+  tipo: 'opcao',
+  so_em: 'bug',
+  opcoes: [
+    { valor: 'transportadora', rotulo: 'Transportadora', icone: <Truck size={15} />, descricao: 'Correios ou frete contratado' },
+    { valor: 'motoboy', rotulo: 'Motoboy', icone: <Bike size={15} /> },
+    { valor: 'retirada', rotulo: 'Retirada na loja', icone: <Store size={15} /> },
+  ],
+}]}
+```
+
+Use `valor` estável em `snake_case` (é o que aparece na tarefa e no que a triagem lê) e deixe o
+texto bonito para o `rotulo`.
 
 Mostre tudo junto ao dev (o diff de cada arquivo) e pergunte com AskUserQuestion: "Aplicar como
 está", "Aplicar sem as perguntas extras" ou "Quero ajustar". Aplique só o que ele aprovar.

@@ -4,6 +4,41 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). A versão 
 `plugins/central-de-bugs/.claude-plugin/plugin.json`. Os pacotes `@stg/central-de-bugs*` têm
 versão própria: cada uma é um Release `pacotes-vX.Y.Z` deste repositório, com os três `.tgz`.
 
+## [0.2.0] — 2026-10-07
+
+### Pacotes (Release `pacotes-v0.2.0`)
+
+- `stg-central-de-bugs-0.2.0.tgz`, `stg-central-de-bugs-fastify-0.2.0.tgz` e
+  `stg-central-de-bugs-cli-0.2.0.tgz`. Os quatro pacotes (contrato incluído) sobem juntos para a
+  0.2.0; só o widget mudou de comportamento. O contrato da API não mudou.
+- Widget, perguntas `tipo: 'opcao'`: `opcoes` aceita, além de texto, objetos
+  `{ valor, rotulo?, icone?, descricao? }` (tipo `OpcaoDaPergunta`, exportado). Retrocompatível:
+  `string[]` continua valendo. O que vai em `extra.respostas` é sempre o `valor`. Opção sem
+  `valor` em texto ou com `valor` repetido é ignorada, com aviso no console.
+- Widget: as pílulas (até 6 opções, e sim/não) mostram o ícone da opção.
+- Widget, correção: o campo de arquivo escondido aparecia como "Choose Files" abaixo de "Anexar
+  arquivo" (o reset de CSS do widget desfazia o atributo `hidden`).
+- Widget: com mais de 6 opções, o `<select>` nativo deu lugar a um seletor próprio, sem
+  dependência nova: campo com o ícone e o rótulo escolhidos e chevron; lista com ícone, rótulo e
+  descrição; busca a partir de 9 opções; setas, Home/End, PageUp/PageDown, Enter, Esc (fecha só
+  o seletor, não o relato), Tab e digitar para pular; padrão ARIA de combobox com
+  `aria-activedescendant`; abre embaixo ou em cima conforme o espaço, dentro do diálogo; segue o
+  tema claro/escuro (`--cdb-*`), `prefers-reduced-motion` e telas estreitas (alvos de toque
+  maiores, busca a 16px para o iOS não dar zoom). Pergunta opcional ganha "Sem resposta" no
+  topo da lista.
+- Widget: textos novos em `Textos`, sobrescrevíveis pela prop `textos`: `escolha`,
+  `semResposta`, `buscarOpcao` e `nadaEncontrado`.
+
+### Plugin `central-de-bugs` 0.2.0
+
+- Skill `instalar-central-de-bugs`: instala os pacotes 0.2.0 e, no Passo 10, sabe propor
+  opções com ícone do pacote de ícones que o SaaS já usa (nunca instala um só para isso).
+
+### Documentação
+
+- `docs/guia.md`: versão 0.2.0 no passo 1 e o formato novo de `opcoes`, com exemplo em
+  lucide-react.
+
 ## [0.1.0] — 2026-10-06
 
 Primeira versão, para o piloto no Acelera Catálogo.

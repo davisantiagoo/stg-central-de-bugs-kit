@@ -16,14 +16,14 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@stg/central-de-bugs": "https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.1.0/stg-central-de-bugs-0.1.0.tgz",
-    "@stg/central-de-bugs-fastify": "https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.1.0/stg-central-de-bugs-fastify-0.1.0.tgz",
+    "@stg/central-de-bugs": "https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.2.0/stg-central-de-bugs-0.2.0.tgz",
+    "@stg/central-de-bugs-fastify": "https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.2.0/stg-central-de-bugs-fastify-0.2.0.tgz",
     "fastify": "^5.2.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },
   "devDependencies": {
-    "@stg/central-de-bugs-cli": "https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.1.0/stg-central-de-bugs-cli-0.1.0.tgz",
+    "@stg/central-de-bugs-cli": "https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.2.0/stg-central-de-bugs-cli-0.2.0.tgz",
     "@types/node": "^22.10.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
