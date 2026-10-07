@@ -1,0 +1,35 @@
+{
+  "name": "exemplo-central-de-bugs",
+  "private": true,
+  "version": "0.1.0",
+  "description": "SaaS mínimo (React + Vite + Fastify) com a Central de Bugs instalada, para rodar contra o simulador do kit.",
+  "type": "module",
+  "engines": {
+    "node": ">=20.19"
+  },
+  "scripts": {
+    "chaves": "central-de-bugs chaves",
+    "simular": "central-de-bugs simular --nome \"Exemplo\"",
+    "servidor": "node --env-file=.env --watch --import tsx servidor/index.ts",
+    "web": "vite",
+    "verificar": "central-de-bugs verificar --central https://app.stgcompany.com.br",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@stg/central-de-bugs": "https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.1.0/stg-central-de-bugs-0.1.0.tgz",
+    "@stg/central-de-bugs-fastify": "https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.1.0/stg-central-de-bugs-fastify-0.1.0.tgz",
+    "fastify": "^5.2.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@stg/central-de-bugs-cli": "https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.1.0/stg-central-de-bugs-cli-0.1.0.tgz",
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "tsx": "^4.20.0",
+    "typescript": "~6.0.2",
+    "vite": "^8.0.12"
+  }
+}

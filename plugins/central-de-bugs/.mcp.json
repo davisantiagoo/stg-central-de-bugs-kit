@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "central-de-bugs": {
+      "type": "http",
+      "url": "https://app.stgcompany.com.br/api/mcp",
+      "oauth": {
+        "scopes": "openid profile email offline_access tarefas:ler tarefas:escrever central-de-bugs:instalar"
+      }
+    }
+  }
+}

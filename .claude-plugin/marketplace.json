@@ -1,0 +1,21 @@
+{
+  "name": "stg",
+  "description": "Plugins da STG para quem desenvolve os SaaS conectados à Central.",
+  "owner": {
+    "name": "STG"
+  },
+  "plugins": [
+    {
+      "name": "central-de-bugs",
+      "source": "./plugins/central-de-bugs",
+      "description": "Instala a Central de Bugs num SaaS React + Vite / Fastify (listas na Central, chaves, widget, plugin e teste no simulador) e corrige ou tria os relatos pelo MCP da Central.",
+      "category": "desenvolvimento",
+      "tags": [
+        "central-de-bugs",
+        "stg",
+        "mcp",
+        "relatos"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,647 @@
+openapi: 3.1.0
+info:
+  title: Central de Bugs — API externa
+  version: 0.1.0
+  summary: A API que o widget dos SaaS chama para relatar bugs e sugestões na Central da STG.
+  description: |
+    Atendida pela Central em `https://app.stgcompany.com.br` e imitada pelo simulador do kit
+    (`npx central-de-bugs simular`, conexão `cdb_simulador00000000000`). O texto completo,
+    com o porquê de cada regra, está em `contrato.md`.
+
+    - **Autenticação:** `Authorization: Bearer <JWT ES256>`, assinado pelo backend do SaaS
+      com a chave privada dele (plugin `@stg/central-de-bugs-fastify`).
+    - **Ordem das verificações:** conexão (404) → origem (403) → preflight (204) →
+      conexão desligada (410) → token (401). Tudo antes de o corpo ser lido.
+    - **CORS:** só para as origens da conexão (localhost só em modo teste). Nunca com
+      credenciais: a API ignora cookies.
+    - **Envelopes:** sucesso `{ data }`, erro `{ error, code?, issues? }`.
+servers:
+  - url: https://app.stgcompany.com.br/api/externo/{conexao}
+    description: Central (produção)
+    variables:
+      conexao:
+        default: cdb_00000000000000000000
+        description: O código público da conexão, `^cdb_[a-z0-9]{20}$`, devolvido pela instalação.
+  - url: http://localhost:4545/api/externo/cdb_simulador00000000000
+    description: Simulador do kit
+security:
+  - tokenDoSaas: []
+
+paths:
+  /estado:
+    get:
+      operationId: estado
+      summary: Nome da conexão, tipos aceitos, modo teste e tetos de anexo.
+      description: O widget só mostra o botão se `tipos` vier com ao menos um tipo.
+      responses:
+        '200':
+          description: Estado da conexão.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/EstadoExterno' }
+        '401': { $ref: '#/components/responses/TokenInvalido' }
+        '403': { $ref: '#/components/responses/OrigemNaoPermitida' }
+        '404': { $ref: '#/components/responses/ConexaoNaoEncontrada' }
+        '410': { $ref: '#/components/responses/ConexaoDesligada' }
+    options:
+      operationId: preflightEstado
+      summary: Preflight de CORS (vale para todas as rotas). Sem token.
+      security: []
+      responses:
+        '204': { $ref: '#/components/responses/Preflight' }
+        '403': { $ref: '#/components/responses/OrigemNaoPermitida' }
+        '404': { $ref: '#/components/responses/ConexaoNaoEncontrada' }
+
+  /relatos:
+    post:
+      operationId: criarRascunho
+      summary: Cria o rascunho do relato (idempotente pelo `id` do cliente).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RelatoExternoCreate' }
+      responses:
+        '200':
+          description: O mesmo `id` já existia, era desta pessoa e foi devolvido como estava.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RespostaRelatoResumo' }
+        '201':
+          description: Rascunho criado.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RespostaRelatoResumo' }
+        '401': { $ref: '#/components/responses/TokenInvalido' }
+        '403': { $ref: '#/components/responses/OrigemNaoPermitida' }
+        '404': { $ref: '#/components/responses/ConexaoNaoEncontrada' }
+        '409':
+          description: '`RELATO_ID_REUSADO` (o `id` é de outro relato) ou `RELATO_TIPO_INDISPONIVEL` (a conexão não tem lista para o tipo).'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
+        '410': { $ref: '#/components/responses/ConexaoDesligada' }
+        '422':
+          description: 'Corpo fora do contrato (`issues` traz o detalhe) ou `EXTRA_GRANDE_DEMAIS` (o `extra` não cabe em 8.192 bytes nem sem os eventos; traz `bytes`).'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
+        '429': { $ref: '#/components/responses/Limite' }
+        '503': { $ref: '#/components/responses/Indisponivel' }
+
+  /relatos/{id}/anexos/{anexoId}:
+    parameters:
+      - $ref: '#/components/parameters/RelatoId'
+      - name: anexoId
+        in: path
+        required: true
+        description: uuid gerado pelo cliente. Reenviar o mesmo arquivo com o mesmo id é idempotente.
+        schema: { type: string, format: uuid }
+    put:
+      operationId: anexar
+      summary: Sobe um arquivo do rascunho (ou da resposta a uma pergunta pendente).
+      description: |
+        Corpo cru. O tipo é decidido pelos BYTES: PNG, JPEG, GIF, WebP, PDF, MP4, WebM, ou
+        texto puro se declarado `text/plain` e sem byte nulo. Tetos em `/estado` (`limites`).
+      parameters:
+        - name: X-File-Name
+          in: header
+          required: true
+          description: Nome do arquivo em `encodeURIComponent` (até 255 caracteres depois de decodificado).
+          schema: { type: string, maxLength: 1024 }
+        - name: X-File-Type
+          in: header
+          required: false
+          description: Tipo declarado. Só decide no caso de texto puro.
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema: { type: string, format: binary }
+      responses:
+        '200':
+          description: Mesmo arquivo com o mesmo `anexoId` (replay).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RespostaAnexo' }
+        '201':
+          description: Arquivo guardado.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RespostaAnexo' }
+        '401': { $ref: '#/components/responses/TokenInvalido' }
+        '403': { $ref: '#/components/responses/OrigemNaoPermitida' }
+        '404':
+          description: '`CONEXAO_NAO_ENCONTRADA`, ou relato que não existe para esta pessoa (sem `code`).'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
+        '409':
+          description: '`RELATO_JA_ENVIADO`, `ATTACHMENT_ID_REUSED` ou `RELATO_ANEXOS_ESGOTADOS`.'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
+        '410': { $ref: '#/components/responses/ConexaoDesligada' }
+        '413':
+          description: '`RELATO_ANEXO_GRANDE` (traz `maxBytes`).'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
+        '415':
+          description: '`RELATO_ANEXO_TIPO`.'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
+        '422':
+          description: Arquivo vazio, nome inválido ou identificador inválido.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
+        '429':
+          description: '`RELATOS_LIMITE` (30 arquivos por hora por pessoa) ou `ANEXOS_LIMITE_DA_CONEXAO` (2 GB por dia na conexão).'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
+        '503':
+          description: '`ATTACHMENT_STORAGE_UNAVAILABLE`.'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
+
+  /relatos/{id}/enviar:
+    parameters:
+      - $ref: '#/components/parameters/RelatoId'
+    post:
+      operationId: enviar
+      summary: Envia o relato. Vira tarefa, ou, em modo teste, só devolve a descrição.
+      description: Sem corpo e sem `Content-Type`. Lista, responsável e tags vêm da conexão, nunca do input.
+      responses:
+        '200':
+          description: Já estava enviado; devolvido como está.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RespostaEnvio' }
+        '201':
+          description: Enviado agora (ou validado, em modo teste — `estado` `teste` e `teste.descricao`).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RespostaEnvio' }
+        '401': { $ref: '#/components/responses/TokenInvalido' }
+        '403': { $ref: '#/components/responses/OrigemNaoPermitida' }
+        '404':
+          description: '`CONEXAO_NAO_ENCONTRADA`, ou relato que não existe para esta pessoa.'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
+        '409':
+          description: '`RELATO_TIPO_INDISPONIVEL`.'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
+        '410': { $ref: '#/components/responses/ConexaoDesligada' }
+        '422':
+          description: Identificador inválido.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
+        '503': { $ref: '#/components/responses/Indisponivel' }
+
+  /relatos/meus:
+    get:
+      operationId: meusRelatos
+      summary: Os relatos enviados pela pessoa do token (conexão + sub), 50 mais recentes.
+      responses:
+        '200':
+          description: Lista, mais recentes primeiro. Relatos de modo teste não aparecem.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/MeuRelatoExterno' }
+        '401': { $ref: '#/components/responses/TokenInvalido' }
+        '403': { $ref: '#/components/responses/OrigemNaoPermitida' }
+        '404': { $ref: '#/components/responses/ConexaoNaoEncontrada' }
+        '410': { $ref: '#/components/responses/ConexaoDesligada' }
+
+  /relatos/{id}/conversa:
+    parameters:
+      - $ref: '#/components/parameters/RelatoId'
+    get:
+      operationId: conversa
+      summary: As perguntas de quem atende e as respostas de quem relatou.
+      responses:
+        '200':
+          description: A conversa.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RespostaConversa' }
+        '401': { $ref: '#/components/responses/TokenInvalido' }
+        '403': { $ref: '#/components/responses/OrigemNaoPermitida' }
+        '404':
+          description: '`CONEXAO_NAO_ENCONTRADA`, ou relato que não existe para esta pessoa.'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
+        '410': { $ref: '#/components/responses/ConexaoDesligada' }
+        '422':
+          description: Identificador inválido.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
+
+  /relatos/{id}/respostas:
+    parameters:
+      - $ref: '#/components/parameters/RelatoId'
+    post:
+      operationId: responder
+      summary: Responde a uma pergunta pendente. Os anexos da resposta sobem antes, pelo PUT de anexo.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MensagemDeRelato' }
+      responses:
+        '200':
+          description: Mesmo `id` de mensagem já gravado (replay); devolve a conversa.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RespostaConversa' }
+        '201':
+          description: Resposta gravada (também vira comentário na tarefa).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RespostaConversa' }
+        '401': { $ref: '#/components/responses/TokenInvalido' }
+        '403': { $ref: '#/components/responses/OrigemNaoPermitida' }
+        '404':
+          description: '`CONEXAO_NAO_ENCONTRADA`, ou relato que não existe para esta pessoa.'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
+        '409':
+          description: '`RELATO_SEM_PERGUNTA` (não há pergunta para responder, ou o relato é de modo teste) ou `MENSAGEM_ID_REUSADO`.'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
+        '410':
+          description: '`CONEXAO_DESLIGADA` ou `RELATO_SEM_TAREFA` (a tarefa foi removida).'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
+        '422':
+          description: Corpo ou identificador inválido.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
+        '429':
+          description: '`RELATOS_LIMITE` (30 mensagens por hora por pessoa).'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
+
+components:
+  securitySchemes:
+    tokenDoSaas:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT **ES256** (só ES256; `none`/HS256 → 401), cabeçalho com `kid`, assinado pela chave
+        privada do SaaS. Claims: `aud` = código da conexão, `sub` (1..128, o id da pessoa no
+        SaaS), `nome` (1..120), `email` opcional (≤254), `iat`, `exp` com `exp - iat ≤ 900`,
+        `iat ≤ agora + 60`, `exp ≤ agora + 960`; vencido quando `exp ≤ agora - 60`.
+
+  parameters:
+    RelatoId:
+      name: id
+      in: path
+      required: true
+      description: O uuid do relato (o mesmo `id` que o cliente mandou no rascunho).
+      schema: { type: string, format: uuid }
+
+  responses:
+    Preflight:
+      description: Preflight aceito. Respondido mesmo com a conexão desligada.
+      headers:
+        Access-Control-Allow-Origin: { schema: { type: string }, description: 'A origem, ecoada.' }
+        Vary: { schema: { type: string, const: Origin } }
+        Access-Control-Allow-Headers: { schema: { type: string, const: 'authorization, content-type, x-file-name, x-file-type' } }
+        Access-Control-Allow-Methods: { schema: { type: string, const: 'GET, POST, PUT' } }
+        Access-Control-Max-Age: { schema: { type: string, const: '600' } }
+    TokenInvalido:
+      description: '`TOKEN_INVALIDO` — ausente, malformado, vencido, de outra conexão ou de outra chave. Sem detalhe, de propósito.'
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Erro' }
+    OrigemNaoPermitida:
+      description: '`ORIGEM_NAO_PERMITIDA` — `Origin` fora das origens da conexão (localhost só em modo teste). Sem cabeçalhos CORS.'
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Erro' }
+    ConexaoNaoEncontrada:
+      description: '`CONEXAO_NAO_ENCONTRADA` — código fora do formato ou desconhecido. Sem cabeçalhos CORS.'
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Erro' }
+    ConexaoDesligada:
+      description: '`CONEXAO_DESLIGADA` — a conexão foi desligada na Central.'
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Erro' }
+    Limite:
+      description: '`RELATOS_LIMITE` — 10 relatos por hora por pessoa, ou 200 por hora na conexão.'
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Erro' }
+    Indisponivel:
+      description: '`CENTRAL_DE_BUGS_DESLIGADA` (a lista da conexão foi apagada) ou `CENTRAL_DE_BUGS_MAL_CONFIGURADA` (a lista deixou de ser de tarefas; o rascunho fica salvo).'
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Erro' }
+
+  schemas:
+    Erro:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string, description: Mensagem legível. }
+        code:
+          type: string
+          description: Código estável para o cliente reagir.
+          examples: [TOKEN_INVALIDO, ORIGEM_NAO_PERMITIDA, CONEXAO_NAO_ENCONTRADA, CONEXAO_DESLIGADA, EXTRA_GRANDE_DEMAIS, RELATOS_LIMITE, ANEXOS_LIMITE_DA_CONEXAO]
+        issues: { description: 'Detalhe da validação (zod), em 422.' }
+        bytes: { type: integer, description: 'Em `EXTRA_GRANDE_DEMAIS`, o tamanho medido.' }
+        maxBytes: { type: integer, description: 'Em `RELATO_ANEXO_GRANDE`, o teto.' }
+
+    TipoRelato:
+      type: string
+      enum: [bug, sugestao]
+
+    EstadoExterno:
+      type: object
+      required: [nome, tipos, modoTeste, anexosHabilitados, limites]
+      properties:
+        nome: { type: string, description: O nome do SaaS na conexão. }
+        tipos:
+          type: array
+          description: Os tipos com lista viva na conexão. Vazio → o widget esconde o botão.
+          items: { $ref: '#/components/schemas/TipoRelato' }
+        modoTeste: { type: boolean }
+        anexosHabilitados: { type: boolean }
+        limites:
+          type: object
+          required: [anexosPorRelato, arquivoMaxBytes, videoMaxBytes]
+          properties:
+            anexosPorRelato: { type: integer, examples: [5] }
+            arquivoMaxBytes: { type: integer, examples: [10485760] }
+            videoMaxBytes: { type: integer, examples: [52428800] }
+
+    ContextoExterno:
+      type: object
+      description: O contexto técnico, coletado pelo widget. Chave desconhecida (inclusive `area`) é descartada. A URL é gravada só com o caminho.
+      required: [url]
+      properties:
+        url: { type: string, maxLength: 500 }
+        tela: { type: string, maxLength: 160 }
+        versao: { type: string, maxLength: 64 }
+        navegador: { type: string, maxLength: 200 }
+        janela: { type: string, maxLength: 40 }
+        online: { type: boolean }
+        fuso: { type: string, maxLength: 64 }
+        erros:
+          type: array
+          maxItems: 20
+          items:
+            type: object
+            required: [quando, mensagem]
+            properties:
+              quando: { type: string, maxLength: 40 }
+              mensagem: { type: string, maxLength: 500 }
+              fonte: { type: string, maxLength: 200 }
+        requisicoes:
+          type: array
+          maxItems: 15
+          items:
+            type: object
+            required: [quando, metodo, caminho, status]
+            properties:
+              quando: { type: string, maxLength: 40 }
+              metodo: { type: string, maxLength: 10 }
+              caminho: { type: string, maxLength: 300 }
+              status: { type: integer, minimum: 0, maximum: 999 }
+              erro: { type: string, maxLength: 300 }
+        navegacao:
+          type: array
+          maxItems: 15
+          items: { type: string, maxLength: 300 }
+
+    Primitivo:
+      oneOf:
+        - { type: string, description: 'Cortado em 500 (recusado acima de 5.000).' }
+        - { type: number }
+        - { type: boolean }
+        - { type: 'null' }
+
+    ValorContexto:
+      oneOf:
+        - $ref: '#/components/schemas/Primitivo'
+        - type: object
+          required: [valor]
+          properties:
+            valor: { $ref: '#/components/schemas/Primitivo' }
+            rotulo: { type: string, description: 'Cortado em 80. Padrão: a chave humanizada.' }
+            id:
+              oneOf:
+                - { type: string, description: Cortado em 80. }
+                - { type: number }
+            sensivel:
+              type: boolean
+              description: true → o valor nunca entra na descrição da tarefa (aparece "🔒 sensível — ver no relato").
+
+    ExtraRelato:
+      type: object
+      description: |
+        O que o SaaS declara. Chaves `^[a-z][a-z0-9_]{0,39}$`. O normalizado inteiro cabe em 8.192
+        bytes UTF-8; acima disso caem os eventos mais antigos e, se nem assim couber, 422
+        `EXTRA_GRANDE_DEMAIS`. Nada daqui vira tag, status, responsável ou lista.
+      properties:
+        contexto:
+          type: object
+          maxProperties: 20
+          propertyNames: { pattern: '^[a-z][a-z0-9_]{0,39}$' }
+          additionalProperties: { $ref: '#/components/schemas/ValorContexto' }
+        respostas:
+          type: array
+          maxItems: 8
+          items:
+            type: object
+            required: [chave, rotulo, valor]
+            properties:
+              chave: { type: string, pattern: '^[a-z][a-z0-9_]{0,39}$' }
+              rotulo: { type: string, description: Cortado em 120. }
+              valor:
+                oneOf:
+                  - { type: string, description: Cortado em 500. }
+                  - { type: number }
+                  - { type: boolean }
+        eventos:
+          type: array
+          maxItems: 30
+          description: Do mais antigo para o mais novo. Só aparecem na descrição de bug.
+          items:
+            type: object
+            required: [quando, nome]
+            properties:
+              quando: { type: string, description: ISO 8601; cortado em 40. }
+              nome: { type: string, description: Cortado em 80. }
+              detalhes:
+                type: object
+                maxProperties: 10
+                propertyNames: { pattern: '^[a-z][a-z0-9_]{0,39}$' }
+                additionalProperties:
+                  oneOf:
+                    - { type: string, description: Cortado em 120. }
+                    - { type: number }
+                    - { type: boolean }
+                    - { type: 'null' }
+
+    RelatoExternoCreate:
+      oneOf:
+        - type: object
+          title: Bug
+          required: [id, tipo, principal, impacto, contexto]
+          properties:
+            id: { type: string, format: uuid }
+            tipo: { const: bug }
+            principal: { type: string, minLength: 15, maxLength: 5000 }
+            complemento: { type: [string, 'null'], maxLength: 2000 }
+            impacto: { type: string, enum: [travado, atrapalha, detalhe] }
+            frequencia: { type: [string, 'null'], enum: [sempre, as_vezes, uma_vez, null] }
+            contexto: { $ref: '#/components/schemas/ContextoExterno' }
+            extra: { $ref: '#/components/schemas/ExtraRelato' }
+        - type: object
+          title: Sugestão
+          required: [id, tipo, principal, impacto, contexto]
+          properties:
+            id: { type: string, format: uuid }
+            tipo: { const: sugestao }
+            principal: { type: string, minLength: 15, maxLength: 5000 }
+            complemento: { type: [string, 'null'], maxLength: 2000 }
+            impacto: { type: string, enum: [muito, as_vezes, seria_bom] }
+            contexto: { $ref: '#/components/schemas/ContextoExterno' }
+            extra: { $ref: '#/components/schemas/ExtraRelato' }
+      discriminator:
+        propertyName: tipo
+
+    RelatoResumo:
+      type: object
+      required: [id, tipo, estado, numero, titulo]
+      properties:
+        id: { type: string, format: uuid }
+        tipo: { $ref: '#/components/schemas/TipoRelato' }
+        estado: { type: string, enum: [rascunho, enviado, teste] }
+        numero: { type: integer, description: 'Global na Central ("bug #812").' }
+        titulo: { type: string, maxLength: 80 }
+
+    RespostaRelatoResumo:
+      type: object
+      required: [data]
+      properties:
+        data: { $ref: '#/components/schemas/RelatoResumo' }
+
+    RespostaEnvio:
+      type: object
+      required: [data]
+      properties:
+        data:
+          allOf:
+            - $ref: '#/components/schemas/RelatoResumo'
+            - type: object
+              properties:
+                teste:
+                  type: object
+                  description: Só em modo teste — a descrição que a tarefa TERIA.
+                  required: [descricao]
+                  properties:
+                    descricao: { type: string, maxLength: 12000 }
+
+    RespostaAnexo:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [id, nome, mime, tamanhoBytes]
+          properties:
+            id: { type: string, format: uuid }
+            nome: { type: string }
+            mime: { type: string }
+            tamanhoBytes: { type: integer }
+
+    MeuRelatoExterno:
+      type: object
+      required: [id, numero, tipo, titulo, enviadoEm, status, conversa, pendente, novidadeEm]
+      properties:
+        id: { type: string, format: uuid }
+        numero: { type: integer }
+        tipo: { $ref: '#/components/schemas/TipoRelato' }
+        titulo: { type: string }
+        enviadoEm: { type: [string, 'null'], format: date-time }
+        status:
+          oneOf:
+            - type: 'null'
+            - type: object
+              required: [nome, cor, grupo]
+              properties:
+                nome: { type: string }
+                cor: { type: [string, 'null'] }
+                grupo: { type: string, description: 'not_started, active, done ou closed.' }
+        conversa: { type: boolean, description: Já existe conversa. }
+        pendente: { type: boolean, description: Há pergunta esperando resposta. }
+        novidadeEm: { type: [string, 'null'], format: date-time, description: Última mudança de status ou pergunta. }
+
+    MensagemExterna:
+      type: object
+      required: [id, direcao, texto, autor, criadoEm]
+      properties:
+        id: { type: string, format: uuid }
+        direcao: { type: string, enum: [pergunta, resposta] }
+        texto: { type: string }
+        autor:
+          description: De quem atende na Central, só o nome.
+          oneOf:
+            - type: 'null'
+            - type: object
+              required: [nome]
+              properties:
+                nome: { type: string }
+        criadoEm: { type: string, format: date-time }
+
+    RespostaConversa:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [mensagens, pendente]
+          properties:
+            mensagens:
+              type: array
+              items: { $ref: '#/components/schemas/MensagemExterna' }
+            pendente: { type: boolean }
+
+    MensagemDeRelato:
+      type: object
+      required: [id, texto]
+      properties:
+        id: { type: string, format: uuid, description: Gerado pelo cliente; reenviar não duplica. }
+        texto: { type: string, minLength: 1, maxLength: 4000 }

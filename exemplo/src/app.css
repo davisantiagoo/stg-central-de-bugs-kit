@@ -1,0 +1,14 @@
+/* Estilo do SaaS de exemplo — de propósito "agressivo" (reset, uppercase nos
+   botões): o widget da Central vive num portal com `all: initial` e não herda nada. */
+:root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+* { box-sizing: border-box; }
+body { margin: 0; background: Canvas; color: CanvasText; }
+button { text-transform: uppercase; font: inherit; padding: 6px 12px; cursor: pointer; }
+.carregando, .entrar { padding: 32px; }
+.entrar button { display: block; margin: 8px 0; }
+.topo { display: flex; gap: 12px; align-items: center; padding: 12px 24px; border-bottom: 1px solid GrayText; }
+.topo span { margin-right: auto; }
+.conteudo { display: grid; grid-template-columns: 280px 1fr; gap: 24px; padding: 24px; }
+.pedidos { list-style: none; padding: 0; display: grid; gap: 8px; }
+.aviso { color: #b42318; }
+.sensivel { margin-top: 24px; padding: 12px; border: 1px dashed #b42318; }

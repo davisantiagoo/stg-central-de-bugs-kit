@@ -1,0 +1,7 @@
+node_modules/
+dist/
+# O .env tem a CHAVE PRIVADA da Central de Bugs (CENTRAL_DE_BUGS_CHAVE_PRIVADA).
+# `npx central-de-bugs chaves` se recusa a gravar nele se esta linha sumir.
+.env
+.env.*
+!.env.example
