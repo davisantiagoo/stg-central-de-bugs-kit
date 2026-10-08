@@ -6,6 +6,7 @@
  *   node relatar-teste.mjs --url http://localhost:5173 [--simulador http://localhost:4545]
  *                          [--texto "…"] [--espera-login 300] [--de <pasta>] [--manter-aberto]
  *                          [--estado <storageState.json>] [--sem-janela]
+ *                          [--visual <pasta>] [--classe-escuro dark] [--so-visual]
  *
  * Por que um navegador VISÍVEL por padrão: o login é de cada SaaS (senha, SSO,
  * código por e-mail). Em vez de adivinhar o fluxo, o script abre a página,
@@ -21,8 +22,15 @@
  * Seletores: só as classes do widget (`.cdb-*`) e papéis ARIA, nunca os textos —
  * o SaaS pode trocar todos os textos pela prop `textos`.
  *
+ * VISUAL (--visual). Antes de preencher, tira prints do botão e do formulário
+ * aberto e mede o contraste (WCAG) dos pares de cor que o widget usa, com as
+ * cores JÁ RESOLVIDAS pelo navegador — inclusive quando o `tema` aponta para
+ * variáveis do SaaS (`hsl(var(--primary))`). Com --classe-escuro, alterna essa
+ * classe no <html> e repete no outro esquema. --so-visual para aí, sem enviar.
+ *
  * Saída: o JSON do relato novo no stdout; o andamento no stderr.
- * Códigos: 0 ok · 1 falhou · 2 uso errado · 3 sem Playwright no repositório.
+ * Códigos: 0 ok · 1 falhou (com --so-visual: algum contraste abaixo do mínimo)
+ *          · 2 uso errado · 3 sem Playwright no repositório.
  */
 import { createRequire } from 'node:module'
 import path from 'node:path'
@@ -37,6 +45,9 @@ const AJUDA = `Uso: node relatar-teste.mjs --url <url do SaaS> [opções]
   --manter-aberto        não fecha o navegador no fim
   --estado <arquivo>     storageState do Playwright com uma sessão já logada no SaaS
   --sem-janela           navegador headless (só faz sentido com --estado ou sem login)
+  --visual <pasta>       grava prints do widget nessa pasta e mede o contraste das cores
+  --classe-escuro <cls>  com --visual: a classe que liga o modo escuro do SaaS no <html> (ex.: dark)
+  --so-visual            com --visual: confere o visual e para, sem enviar relato
 `
 
 function lerArgs(argv) {
@@ -49,6 +60,9 @@ function lerArgs(argv) {
     manterAberto: false,
     estado: null,
     semJanela: false,
+    visual: null,
+    classeEscuro: null,
+    soVisual: false,
   }
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i]
@@ -65,10 +79,14 @@ function lerArgs(argv) {
     else if (arg === '--manter-aberto') opcoes.manterAberto = true
     else if (arg === '--estado') opcoes.estado = path.resolve(valor())
     else if (arg === '--sem-janela') opcoes.semJanela = true
+    else if (arg === '--visual') opcoes.visual = path.resolve(valor())
+    else if (arg === '--classe-escuro') opcoes.classeEscuro = valor()
+    else if (arg === '--so-visual') opcoes.soVisual = true
     else if (arg === '--ajuda' || arg === '--help' || arg === '-h') { process.stdout.write(AJUDA); process.exit(0) }
     else throw new Error(`Opção desconhecida: ${arg}`)
   }
   if (!opcoes.url) throw new Error('Falta --url')
+  if ((opcoes.classeEscuro || opcoes.soVisual) && !opcoes.visual) throw new Error('--classe-escuro e --so-visual pedem --visual <pasta>')
   if (!Number.isFinite(opcoes.esperaLogin) || opcoes.esperaLogin <= 0) throw new Error('--espera-login precisa ser um número de segundos')
   // O formulário recusa menos de 15 caracteres no texto principal.
   if (opcoes.texto.trim().length < 15) throw new Error('--texto precisa de pelo menos 15 caracteres')
@@ -97,6 +115,98 @@ async function relatosDoSimulador(simulador) {
 }
 
 const log = (texto) => process.stderr.write(`${texto}\n`)
+
+/**
+ * Os pares de cor do widget, com o mínimo WCAG de cada um. As cores são lidas
+ * de uma sonda dentro de `.cdb-raiz` (onde as `--cdb-*` valem) e convertidas
+ * para sRGB por um canvas, que entende hsl, oklch, color-mix etc. Cor com
+ * transparência é composta sobre a superfície, como aparece na tela.
+ */
+const PARES = [
+  ['texto', 'superficie', 4.5, 'texto principal'],
+  ['texto-2', 'superficie', 4.5, 'texto secundário'],
+  ['apagado', 'superficie', 3, 'dicas e placeholders'],
+  ['texto-no-acento', 'acento', 4.5, 'botão principal'],
+  ['acento', 'superficie', 3, 'foco e seleção'],
+  ['perigo', 'superficie', 3, 'erros'],
+]
+
+async function medirContraste(pagina) {
+  return pagina.evaluate((pares) => {
+    const raiz = document.querySelector('.cdb-raiz')
+    if (!raiz) return { erro: 'sem .cdb-raiz na página' }
+    const canvas = document.createElement('canvas')
+    canvas.width = canvas.height = 1
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })
+    const sonda = document.createElement('span')
+    raiz.appendChild(sonda)
+    const rgb = (variavel, fundo) => {
+      // Fallback magenta: variável inexistente apareceria como #ff00ff, e não herdaria a cor do pai.
+      sonda.style.color = `var(--cdb-${variavel}, #ff00ff)`
+      const cor = getComputedStyle(sonda).color
+      ctx.fillStyle = fundo ? `rgb(${fundo.join(',')})` : '#fff'
+      ctx.fillRect(0, 0, 1, 1)
+      ctx.fillStyle = cor
+      ctx.fillRect(0, 0, 1, 1)
+      return { cor, rgb: Array.from(ctx.getImageData(0, 0, 1, 1).data.slice(0, 3)) }
+    }
+    const lum = ([r, g, b]) => {
+      const c = [r, g, b].map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4 })
+      return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+    }
+    const razao = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((m, n) => n - m); return (x + 0.05) / (y + 0.05) }
+    const superficie = rgb('superficie').rgb
+    const saida = pares.map(([frente, fundo, minimo, uso]) => {
+      const f = rgb(fundo, fundo === 'superficie' ? null : superficie).rgb
+      const t = rgb(frente, f)
+      const r = Math.round(razao(t.rgb, f) * 100) / 100
+      return { par: `${frente} × ${fundo}`, uso, razao: r, minimo, ok: r >= minimo }
+    })
+    sonda.remove()
+    return { esquema: matchMedia('(prefers-color-scheme: dark)').matches ? 'sistema escuro' : 'sistema claro', pares: saida }
+  }, PARES)
+}
+
+function logContraste(rotulo, medida) {
+  if (medida.erro) { log(`! ${rotulo}: ${medida.erro}`); return }
+  log(`  ${rotulo}:`)
+  for (const p of medida.pares) log(`    ${p.ok ? '✓' : '✗'} ${p.uso.padEnd(22)} ${p.par.padEnd(30)} ${p.razao.toFixed(2)} (mínimo ${p.minimo})`)
+}
+
+/** Prints e contraste do widget aberto; com classe de escuro, repete no outro esquema e devolve a página como estava. */
+async function conferirVisual(pagina, opcoes) {
+  const { mkdir } = await import('node:fs/promises')
+  await mkdir(opcoes.visual, { recursive: true })
+  const arquivo = (nome) => path.join(opcoes.visual, nome)
+  const visual = { prints: [], medidas: {} }
+
+  await pagina.waitForTimeout(400) // a animação de entrada do diálogo
+  await pagina.screenshot({ path: arquivo('widget-aberto.png') })
+  visual.prints.push(arquivo('widget-aberto.png'))
+  visual.medidas.atual = await medirContraste(pagina)
+  log('→ Visual do widget (cores resolvidas no navegador):')
+  logContraste('esquema atual da página', visual.medidas.atual)
+
+  if (opcoes.classeEscuro) {
+    const classe = opcoes.classeEscuro
+    const ligou = await pagina.evaluate((c) => document.documentElement.classList.toggle(c), classe)
+    await pagina.waitForTimeout(300)
+    const nome = ligou ? 'widget-aberto-escuro.png' : 'widget-aberto-claro.png'
+    await pagina.screenshot({ path: arquivo(nome) })
+    visual.prints.push(arquivo(nome))
+    visual.medidas.alternado = await medirContraste(pagina)
+    logContraste(`com a classe "${classe}" ${ligou ? 'ligada' : 'desligada'} no <html>`, visual.medidas.alternado)
+    await pagina.evaluate((c) => document.documentElement.classList.toggle(c), classe)
+  }
+
+  // O botão flutuante sobre a página, com o formulário fechado.
+  await pagina.keyboard.press('Escape')
+  await pagina.locator('.cdb-raiz form').waitFor({ state: 'hidden', timeout: 5_000 }).catch(() => {})
+  await pagina.screenshot({ path: arquivo('botao.png') })
+  visual.prints.push(arquivo('botao.png'))
+  log(`  prints: ${visual.prints.join(', ')}`)
+  return visual
+}
 
 async function main() {
   let opcoes
@@ -160,6 +270,17 @@ async function main() {
     const formulario = pagina.locator('.cdb-raiz form')
     await formulario.waitFor({ state: 'visible', timeout: 20_000 })
 
+    let visual = null
+    if (opcoes.visual) {
+      visual = await conferirVisual(pagina, opcoes)
+      if (opcoes.soVisual) {
+        process.stdout.write(`${JSON.stringify({ visual }, null, 2)}\n`)
+        return visual.medidas.atual.pares?.every((p) => p.ok) && (visual.medidas.alternado?.pares ?? []).every((p) => p.ok) ? 0 : 1
+      }
+      await botao.click()
+      await formulario.waitFor({ state: 'visible', timeout: 20_000 })
+    }
+
     // Tipo: o primeiro do seletor é sempre o bug (a ordem vem do contrato).
     const tipos = formulario.getByRole('radiogroup').filter({ has: pagina.locator('.cdb-seg__item') })
     if (await tipos.count()) await tipos.first().getByRole('radio').first().click()
@@ -203,6 +324,7 @@ async function main() {
       anexos: r.anexos.map((a) => ({ nome: a.nome, mime: a.mime, tamanhoBytes: a.tamanhoBytes })),
       descricao: r.descricao,
       avisosDoWidget: errosDoConsole,
+      ...(visual ? { visual } : {}),
     }, null, 2)}\n`)
     return 0
   } catch (erro) {

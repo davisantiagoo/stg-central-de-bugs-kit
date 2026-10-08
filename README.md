@@ -44,25 +44,34 @@ concede a instalação. Se é por OAuth, reautentique-o em `/mcp` para autorizar
 
 Para os pacotes você não precisa de nada: nem conta no GitHub, nem token, nem `.npmrc`.
 
-## O fluxo em 5 passos
+## O fluxo em 7 etapas
 
-No repositório do seu SaaS, abra o Claude Code e diga **"instala a Central de Bugs aqui"**.
+No repositório do seu SaaS, abra o Claude Code e diga **"instala a Central de Bugs aqui"**. O
+agente anuncia as etapas, diz em qual você está e o que precisa de você, e mostra tudo antes de
+alterar.
 
-1. **Login.** O navegador abre a Central. Você entra e autoriza, uma vez só. O mesmo login serve
-   depois para corrigir os relatos.
-2. **Pasta.** O agente mostra as pastas em que você tem acesso total, e você escolhe onde ficam
-   os bugs do SaaS e quem recebe os relatos.
-3. **Chaves e listas.** O agente gera o par de chaves na sua máquina. A privada vai para o
-   `.env` e nunca é impressa. Ele cria na pasta as listas **Bugs** e **Melhorias**, com os status
-   prontos, e a conexão com o SaaS, enviando só a chave **pública**. Antes de criar, ele mostra
-   o que vai fazer e espera o seu ok.
-4. **Código e teste.** O agente instala os pacotes, monta o widget, registra o plugin Fastify,
-   propõe o `contexto()`, os `registrar()` e o `data-relato-ignorar` nas telas sensíveis
-   (você aprova), e testa tudo no **simulador** local. Você vê a descrição exata que a tarefa
-   terá.
-5. **Produção.** Você configura as variáveis no Coolify, faz o deploy e relata algo de verdade.
-   A conexão nasce em **modo teste**, então nada vira tarefa até você conferir e pedir "sai do
-   modo teste da Central de Bugs".
+1. **Entender o projeto.** Só leitura: stack, login, entidades, fluxos críticos, deploy. Você vê
+   um retrato do que ele entendeu.
+2. **Decidir o que capturar.** Além do básico que o widget já leva (print, tela, erros de
+   console, requisições que falharam), ele propõe um **plano de captura**: o contexto do negócio
+   no momento do relato, os eventos que antecedem um bug, perguntas extras e as áreas que ficam
+   fora do print. Você aprova ou ajusta.
+3. **Conectar à Central.** O navegador abre a Central para o login. Você escolhe a pasta e quem
+   recebe os relatos. As chaves são geradas na sua máquina: a privada vai para o `.env` e nunca é
+   impressa. As listas **Bugs** e **Melhorias** e a conexão são criadas depois do seu ok.
+4. **Implementar.** Widget, plugin Fastify e o plano de captura, com o diff na sua frente. O
+   widget ganha o visual do seu SaaS: cores, cantos e fonte vêm das suas variáveis CSS, e o modo
+   escuro acompanha o seu.
+5. **Variáveis de ambiente.** As locais (apontando para o simulador), o `.env.example` e um
+   arquivo `.env.central-de-bugs.producao`, fora do git, com as quatro variáveis de produção
+   prontas para colar.
+6. **Testar localmente.** Um bug de teste no **simulador**, e você vê a descrição exata que a
+   tarefa terá. Com Playwright, o agente também mostra prints do widget nos dois temas e mede o
+   contraste das cores.
+7. **Publicar e testar em produção.** Na hora certa, o agente põe as variáveis de produção na sua
+   área de transferência e diz onde colar. Depois ele publica (com o seu sim), confere o deploy
+   e pede um relato real. A conexão nasce em **modo teste**: nada vira tarefa até você conferir e
+   ele ligar de vez.
 
 Depois disso:
 
@@ -125,7 +134,7 @@ da Central e o `gh` autenticado.
 
 5. Atualize as URLs aqui no kit: o bloco do [guia, passo 1](docs/guia.md#1-versão-atual-dos-pacotes),
    o `exemplo/package.json` (e o `exemplo/package-lock.json`, se houver, com `npm install` no
-   exemplo), o passo 2 da skill `instalar-central-de-bugs` e o CHANGELOG. Na Central, as
+   exemplo), a seção A do `referencia.md` da skill `instalar-central-de-bugs` e o CHANGELOG. Na Central, as
    constantes `PACOTES_PUBLICADOS` (`apps/server/src/modules/relatos/instalacao.ts`) e
    `PACOTES_DA_CENTRAL_DE_BUGS` (`apps/web/src/shell/relatos/conexoes.ts`), que a instalação e a
    tela da conexão mostram ao dev.

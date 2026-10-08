@@ -4,6 +4,38 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). A versão 
 `plugins/central-de-bugs/.claude-plugin/plugin.json`. Os pacotes `@stg/central-de-bugs*` têm
 versão própria: cada uma é um Release `pacotes-vX.Y.Z` deste repositório, com os três `.tgz`.
 
+## [0.3.0] — 2026-10-08
+
+Só o plugin muda. Os pacotes continuam no Release `pacotes-v0.2.0`.
+
+### Plugin `central-de-bugs` 0.3.0
+
+- Skill `instalar-central-de-bugs` reescrita como uma instalação guiada em 7 etapas: entender o
+  projeto, decidir o que capturar, conectar à Central, implementar, variáveis de ambiente,
+  testar localmente e publicar e testar em produção. O agente abre anunciando o roteiro e, a
+  cada etapa, mostra onde o dev está e o que precisa dele.
+- Etapa nova **Decidir o que capturar**: antes de mexer no código, o agente monta com o dev um
+  plano de captura (contexto, eventos, perguntas, áreas fora do print) a partir do retrato do
+  projeto.
+- Variáveis de ambiente num lugar só. O script novo `variaveis-de-producao.mjs` grava as quatro
+  variáveis de produção em `.env.central-de-bugs.producao` (fora do git, permissão 600), mostra
+  a tabela com a chave privada mascarada e, com `--copiar`, põe o conteúdo na área de
+  transferência. A chave continua sem passar pelo agente.
+- Etapa de produção completa: colar as variáveis (com instrução para Coolify e Vercel), commit e
+  push com o sim do dev, conferência do deploy pela rota do token (401 = configurado, 503 = falta
+  variável), relato real em modo teste e saída do modo teste.
+- Visual do SaaS: na Etapa 1 o agente descobre de onde vêm as cores, o raio, a fonte e o modo
+  escuro do SaaS; na Etapa 4 monta o `tema` apontando para as variáveis CSS do próprio SaaS
+  (`hsl(var(--primary))`), para o widget acompanhar o modo escuro e futuras trocas de marca, e
+  liga o `esquema` ao tema do SaaS; na Etapa 6 mostra prints e o contraste. Nada muda no que
+  chega à Central. Guia em `referencia.md` §F.
+- `relatar-teste.mjs --visual <pasta>`: prints do botão e do formulário aberto e contraste WCAG
+  dos pares de cor do widget, com as cores já resolvidas pelo navegador. `--classe-escuro <cls>`
+  repete com o modo escuro do SaaS ligado; `--so-visual` confere sem enviar relato (código 1 se
+  algum par ficar abaixo do mínimo).
+- Os detalhes técnicos saíram do `SKILL.md` para `referencia.md` (pacotes, variáveis, modelos de
+  código, regras de captura) e `problemas.md` (o que fazer quando algo falha).
+
 ## [0.2.0] — 2026-10-07
 
 ### Pacotes (Release `pacotes-v0.2.0`)

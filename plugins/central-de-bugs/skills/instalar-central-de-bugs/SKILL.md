@@ -1,243 +1,218 @@
 ---
 name: instalar-central-de-bugs
-description: Instala a Central de Bugs da STG no SaaS deste repositório (React + Vite no front, Fastify no servidor). Cria as listas Bugs e Melhorias numa pasta da Central pelo MCP, gera o par de chaves (a privada fica só no .env), monta o widget <CentralDeBugs>, registra o plugin Fastify do token, propõe contexto() e registrar(), marca as telas sensíveis e testa tudo no simulador. Use quando pedirem para "instalar a Central de Bugs", "ligar este SaaS à Central de Bugs", "pôr o botão de bug" ou "sair do modo teste" da Central de Bugs.
+description: Instala a Central de Bugs da STG no SaaS deste repositório (React + Vite no front, Fastify no servidor), do começo à publicação, em 7 etapas guiadas. Entende o projeto, decide com o dev o que capturar no momento do bug além do básico, cria as listas Bugs e Melhorias numa pasta da Central pelo MCP, gera as chaves, implementa widget e plugin com o visual do SaaS (cores, cantos, modo escuro, contraste conferido), prepara as variáveis de ambiente locais e de produção, testa no simulador, publica e confere em produção até sair do modo teste. Use quando pedirem para "instalar a Central de Bugs", "ligar este SaaS à Central de Bugs", "pôr o botão de bug" ou "sair do modo teste" da Central de Bugs.
 argument-hint: "[nome do SaaS]"
 ---
 
 # Instalar a Central de Bugs neste SaaS
 
-Você vai ligar o SaaS deste repositório à Central de Bugs da STG. Os relatos de quem usa o SaaS
-viram tarefas nas listas **Bugs** e **Melhorias** de uma pasta da Central. A Central fica em
-`https://app.stgcompany.com.br`, e o MCP dela é o servidor `central-de-bugs` deste plugin
-(no `/mcp` ele aparece como `plugin:central-de-bugs:central-de-bugs`).
+Você vai guiar o dev pela instalação da Central de Bugs da STG no SaaS deste repositório, do
+primeiro arquivo lido até o primeiro relato real em produção. Os relatos de quem usa o SaaS
+viram tarefas nas listas **Bugs** e **Melhorias** de uma pasta da Central
+(`https://app.stgcompany.com.br`). O MCP da Central é o servidor `central-de-bugs` deste plugin
+(no `/mcp`: `plugin:central-de-bugs:central-de-bugs`).
 
-O dev só faz duas coisas: o login na Central (OAuth, no navegador) e as escolhas que você
-pedir. O resto é seu, passo a passo, **sempre mostrando antes de alterar**.
+A instalação é uma **conversa guiada**, não um script mudo. Em cada etapa o dev sabe onde está,
+o que você vai fazer e o que precisa dele. Nada muda no código, na Central ou no ambiente sem ele
+ver antes.
 
-Se o pedido for só **sair do modo teste**, pule direto para a seção "Sair do modo teste" no fim.
+Se o pedido for só **sair do modo teste**, pule para a seção "Sair do modo teste" no fim.
+
+Arquivos de apoio, nesta pasta (`${CLAUDE_SKILL_DIR}`). Leia só a seção que a etapa indicar:
+- `referencia.md`: pacotes, variáveis, modelos de código e regras de captura;
+- `problemas.md`: o que fazer quando algo falha;
+- `variaveis-de-producao.mjs`: monta o arquivo de variáveis de produção sem expor a chave;
+- `relatar-teste.mjs`: relata um bug de teste pelo widget, no simulador.
 
 ## Regras que valem do primeiro ao último passo
 
-1. **A chave privada nunca passa por você.** Ela é gerada pela CLI direto no arquivo `.env`.
-   Nunca rode `cat`, `grep`, `sed`, `head` ou `Read` num arquivo que tenha
-   `CENTRAL_DE_BUGS_CHAVE_PRIVADA`. Para saber se a chave existe, use
-   `npx central-de-bugs chave-publica --env <arquivo>`, que só imprime a pública. Se a privada
-   aparecer na conversa por qualquer motivo, diga ao dev que ela está comprometida e gere outra
-   com `npx central-de-bugs chaves --env <arquivo> --forcar`.
-2. **Recuse `VITE_` na chave privada.** Tudo que começa com `VITE_` vai para o JavaScript que o
-   navegador baixa. A chave privada só existe no servidor, com o nome
-   `CENTRAL_DE_BUGS_CHAVE_PRIVADA`. Se o dev pedir outra coisa, explique e recuse.
-3. **O `.env` nunca vai para o git.** Confira com `git check-ignore` antes de gravar qualquer
-   coisa nele (a CLI também confere e recusa).
-4. **Os pacotes não pedem token.** Eles se instalam pelas URLs públicas do Release do kit
-   (Passo 2). Não crie `.npmrc`, não peça token do GitHub nem login no npm. Se o dev colar
-   um token qualquer na conversa, não o repita e recomende revogá-lo.
-5. **Escrita na Central só com `dry_run` primeiro.** Chame `instalar_central_de_bugs` e
-   `sair_do_modo_teste` primeiro com `dry_run: true`, mostre o resultado e espere a confirmação
-   do dev. Só depois repita a chamada sem `dry_run`.
-6. **Código do SaaS: proponha, mostre e só então aplique.** Vale para `contexto()`,
-   `registrar()`, perguntas extras e `data-relato-ignorar`. O dev conhece o domínio, você não.
-7. **Nomes exatos.** Pacotes: `@stg/central-de-bugs` (front),
-   `@stg/central-de-bugs-fastify` (servidor) e `@stg/central-de-bugs-cli`
-   (dev, binário `central-de-bugs`). Variáveis: `CENTRAL_DE_BUGS_CHAVE_PRIVADA` e
-   `CENTRAL_DE_BUGS_CONEXAO` no servidor, `VITE_CENTRAL_DE_BUGS_CONEXAO` e
-   `VITE_CENTRAL_DE_BUGS_URL` no front. Não invente outros nomes.
+1. **A chave privada nunca passa por você.** A CLI a grava direto no `.env`, e o
+   `variaveis-de-producao.mjs` a copia para o arquivo de produção. Essas duas peças são as
+   únicas que leem a chave, e nenhuma a imprime. Nunca rode `cat`, `grep`, `sed`, `head` ou
+   `Read` num arquivo que tenha `CENTRAL_DE_BUGS_CHAVE_PRIVADA`. Isso inclui o `.env`, o
+   `.env.local`, o `.env.production` e o `.env.central-de-bugs.producao`. Para saber se a chave
+   existe, use `npx central-de-bugs chave-publica --env <arquivo>`, que só imprime a pública. Se
+   a privada aparecer na conversa por qualquer motivo, diga ao dev que ela está comprometida e
+   gere outra com `npx central-de-bugs chaves --env <arquivo> --forcar`.
+2. **Recuse `VITE_` na chave privada.** Tudo que começa com `VITE_` vai para o navegador.
+3. **Nenhum arquivo com segredo vai para o git.** Confira com `git check-ignore` antes de gravar.
+4. **Os pacotes não pedem token.** Não crie `.npmrc` nem peça token ou login no npm. Se o dev
+   colar um token na conversa, não o repita e recomende revogá-lo.
+5. **Escrita na Central só com `dry_run` primeiro.** Vale para `instalar_central_de_bugs` e
+   `sair_do_modo_teste`: simule, mostre e só repita sem `dry_run` depois do sim do dev.
+6. **Código do SaaS: proponha, mostre e só então aplique.** O dev conhece o domínio, você não.
+7. **Nada sai da máquina sem o sim do dev.** Commit, push e deploy só depois de ele aprovar.
+8. **Nomes exatos.** Pacotes `@stg/central-de-bugs`, `@stg/central-de-bugs-fastify` e
+   `@stg/central-de-bugs-cli` (binário `central-de-bugs`). Variáveis
+   `CENTRAL_DE_BUGS_CHAVE_PRIVADA`, `CENTRAL_DE_BUGS_CONEXAO`, `VITE_CENTRAL_DE_BUGS_CONEXAO` e
+   `VITE_CENTRAL_DE_BUGS_URL`. Não invente outros.
 
-Mantenha um checklist dos passos abaixo (TodoWrite, se disponível) e diga ao dev em que passo
-você está.
+## Como falar com o dev durante a instalação
 
-## Passo 1 — Reconhecer o repositório
+**Abra com esta mensagem** (adapte o nome do SaaS; se ainda não souber, diga "este SaaS"):
 
-Leia antes de perguntar qualquer coisa. Descubra e anote:
+> Vou instalar a **Central de Bugs** no **<SaaS>**. No fim, quem usa o <SaaS> terá um botão
+> "Bug ou sugestão", e cada relato chega como tarefa na Central, com print, contexto do negócio
+> e o rastro técnico do que deu errado.
+>
+> São 7 etapas, e em cada uma eu digo o que vou fazer antes de mexer em qualquer coisa:
+>
+> 1. **Entender o projeto**: leio o código, sem alterar nada
+> 2. **Decidir o que capturar**: o que o relato leva além do básico
+> 3. **Conectar à Central**: login, pasta e chaves
+> 4. **Implementar**: servidor, widget com o visual do <SaaS> e o plano de captura
+> 5. **Variáveis de ambiente**: as locais e as de produção, num arquivo pronto
+> 6. **Testar localmente**: um bug de teste num simulador da Central
+> 7. **Publicar e testar em produção**: deploy, relato real e ativação
+>
+> De você eu vou precisar de: login na Central (abre o navegador), algumas escolhas, colar as
+> variáveis no painel do deploy e mandar um relato de teste em produção.
 
+Crie um checklist com as 7 etapas (a ferramenta de tarefas, se disponível) e mantenha-o em dia.
+
+**Ao começar cada etapa**, mostre onde o dev está e o que vem:
+
+> **Etapa 3 de 7 · Conectar à Central**
+> ✓ Projeto · ✓ Captura · **▸ Conexão** · Implementar · Variáveis · Teste local · Produção
+>
+> Agora vou: <uma frase>. Vou precisar de você para: <uma frase, ou "nada, só acompanhar">.
+
+**Ao terminar cada etapa**, feche com uma linha do que ficou pronto ("✓ Conectado: listas
+criadas na pasta X, código `cdb_…`"). Use AskUserQuestion sempre que a resposta for uma
+escolha. Quando algo falhar, consulte `problemas.md` e explique em uma ou duas frases.
+
+---
+
+## Etapa 1 · Entender o projeto
+
+Só leitura. Descubra:
+
+**Stack e estrutura**
 - **Gerenciador de pacotes:** `package-lock.json` → npm, `pnpm-lock.yaml` → pnpm,
   `yarn.lock` → yarn. Em monorepo, quais workspaces são o front e o servidor.
-- **Front:** o pacote com `vite` e `react`. Ache o `vite.config.*`, a porta do dev server
-  (`server.port`, padrão 5173), o `envDir` e o `envPrefix` se existirem, e o arquivo de tipos
-  `vite-env.d.ts`.
-- **Raiz autenticada:** o componente que só renderiza com alguém logado. Pode ser um layout de
-  rotas protegidas, um `<RequireAuth>`, um `if (!session) return <Login/>` no `App.tsx` ou um
-  provider de sessão. O widget vai lá: fora da área logada, a rota do token responde 401 e o
-  botão some.
-- **Como o front chama a API do SaaS:** `fetch('/api/…')` relativo com proxy do Vite, outra
-  origem com `credentials: 'include'` ou um cliente próprio (`api.get`, axios, ky). A função
-  `token` do widget tem que usar **o mesmo caminho** que o SaaS já usa para chamadas
-  autenticadas.
-- **Servidor:** o pacote com `fastify`. Ache onde o app é montado, onde a autenticação é
-  registrada e **como uma rota lê o usuário logado**. Alguns casos comuns:
-  `req.user` (@fastify/passport ou JWT), `req.session.user` (@fastify/session),
-  `await auth.api.getSession({ headers })` (better-auth) ou um `getUsuario(req)` próprio.
-  Anote também o prefixo em que as rotas de API são registradas.
-- **Onde o servidor lê o `.env`** (`dotenv`, `--env-file`, `@fastify/env`) e qual arquivo é:
-  o `.env` da raiz ou o do workspace do servidor. É nele que a chave privada vai.
-- **Nome do SaaS:** `$ARGUMENTS`, se o dev passou. Se não, procure no `package.json`, no README
-  e no `<title>` do `index.html`.
-- **Origens:** a de desenvolvimento (`http://localhost:<porta do Vite>`) e a de produção
-  (`https://…`). Procure em `.env.example`/`.env.sample`, README, Dockerfile, configuração de
-  CORS e arquivos de deploy. **Não leia `.env`, `.env.local`, `.env.production` nem nenhum outro
-  `.env` de verdade**: numa reinstalação ele já tem `CENTRAL_DE_BUGS_CHAVE_PRIVADA` (regra 1), e
-  sempre tem outros segredos do SaaS. Se a origem só estiver num `VITE_*_URL` de um `.env` real,
-  imprima só aquela linha, nunca o arquivo:
+- **Front:** o pacote com `vite` e `react`. O `vite.config.*`, a porta (`server.port`, padrão
+  5173), `envDir`, `envPrefix` e o `vite-env.d.ts`.
+- **Raiz autenticada:** o componente que só renderiza com alguém logado (layout de rotas
+  protegidas, `<RequireAuth>`, `if (!session) return <Login/>`, provider de sessão). O widget
+  vai lá.
+- **Como o front chama a API:** `fetch('/api/…')` com proxy do Vite, outra origem com
+  `credentials: 'include'` ou um cliente próprio (`api.get`, axios, ky).
+- **Servidor:** o pacote com `fastify`. Onde o app é montado, onde a autenticação é registrada,
+  **como uma rota lê o usuário logado** (`req.user`, `req.session.user`,
+  `auth.api.getSession({ headers })`, `getUsuario(req)`…) e o prefixo das rotas de API.
+- **Onde o servidor lê o `.env`** (`dotenv`, `--env-file`, `@fastify/env`) e **qual arquivo**.
+  Anote se ele existe; **não o leia** (regra 1).
+- **Deploy:** procure `Dockerfile`, `nixpacks.toml`, `docker-compose*`, `vercel.json`,
+  `.github/workflows`. Anote se front e servidor saem num deploy só ou em dois, e se o push na
+  branch principal já dispara o deploy.
+- **Origens:** desenvolvimento (`http://localhost:<porta do Vite>`) e produção (`https://…`).
+  Procure em `.env.example`, README, CORS e arquivos de deploy. Se a origem só estiver num
+  `VITE_*_URL` de um `.env` real, imprima só aquela linha:
   `node -e "for (const l of require('fs').readFileSync(process.argv[1],'utf8').split('\\n')) if (/^VITE_[A-Z0-9_]*URL=/.test(l)) console.log(l)" <arquivo>`.
-  Na dúvida, pergunte a origem ao dev. Origem é `https://host[:porta]`, sem caminho e sem barra
-  final.
 - **Playwright:** se `playwright` ou `@playwright/test` está nas dependências.
-- **Já instalado?** Procure `@stg/central-de-bugs` no `package.json` e
-  `CENTRAL_DE_BUGS_` em `.env.example`. Se já estiver instalado, diga isso ao dev e pergunte o
-  que ele quer refazer, em vez de duplicar.
+- **Visual:** de onde vêm as cores, o raio e a fonte do SaaS. Procure, nesta ordem: variáveis
+  CSS no `:root` (shadcn: `--primary`, `--card`, `--radius`; Chakra: `--chakra-colors-*`), o
+  `tailwind.config.*` ou o `@theme` do Tailwind 4, um tema de MUI/Chakra/Mantine em JS e a
+  fonte carregada no `index.html` ou no CSS global. Veja também **como o modo escuro liga**:
+  uma classe no `<html>` (qual?), um atributo (`data-theme`), um estado em JS, só o sistema, ou
+  nenhum. E se há algo flutuante no canto inferior direito (chat, botão de ajuda).
+- **Já instalado?** `@stg/central-de-bugs` no `package.json` ou `CENTRAL_DE_BUGS_` no
+  `.env.example`. Se sim, diga ao dev e pergunte o que ele quer refazer, em vez de duplicar.
 
-Mostre ao dev um resumo curto do que achou (front, servidor, raiz autenticada, getter da
-sessão, arquivo `.env` do servidor, nome, origens) e siga.
+**Escopo do produto**: o que torna um relato útil depende disso.
+- **Nome e propósito:** `$ARGUMENTS`, `package.json`, README, `<title>`.
+- **Entidades principais:** o que o produto manipula (pedidos, catálogos, clientes, contratos…).
+  Olhe as rotas do front, os módulos do servidor e o schema do banco.
+- **Fluxos críticos:** onde um erro custa caro (publicar, pagar, importar, integrar com
+  terceiros, enviar). Eles serão os `registrar()`.
+- **Multi-tenant?** Se há cliente/organização/loja acima do usuário, isso entra no contexto.
+- **Dado sensível na tela:** CPF, cartão, saldos, contatos de cliente final.
 
-**Antes de seguir, confira o vazamento por configuração do Vite:** se o `vite.config` tiver
-um `envPrefix` que case com `CENTRAL_DE_BUGS_CHAVE_PRIVADA` (por exemplo `'CENTRAL_'` ou uma
-lista que o inclua), ou um `define` que injete `process.env` inteiro, **pare**. Explique que a
-chave privada iria para o navegador e proponha a correção antes de qualquer outro passo.
+**Trava de segurança.** Se o `vite.config` tiver um `envPrefix` que case com
+`CENTRAL_DE_BUGS_CHAVE_PRIVADA` (por exemplo `'CENTRAL_'`) ou um `define` que injete
+`process.env` inteiro, **pare**: a chave iria para o navegador. Proponha a correção antes de
+seguir.
 
-## Passo 2 — Instalar os pacotes
+**Feche a etapa com o retrato do projeto:**
 
-Os pacotes são `.tgz` públicos, anexados ao Release `pacotes-v0.2.0` do repositório
-`davisantiagoo/stg-central-de-bugs-kit`. Instalam pela URL, **sem token, sem `.npmrc` e sem
-registry**. Versão atual e URLs (as mesmas do `docs/guia.md` do kit, passo 1):
+> **O que eu entendi do <SaaS>**
+> - **Produto:** <uma frase>
+> - **Stack:** <front> · <servidor> · <gerenciador> · <monorepo ou não>
+> - **Entidades:** <3 a 5>
+> - **Fluxos críticos:** <3 a 5>
+> - **Login:** raiz autenticada em `<arquivo>`, usuário lido por `<getter>`
+> - **Variáveis:** servidor lê `<arquivo .env>` (<existe | será criado>)
+> - **Deploy:** <onde e como; um ou dois deploys; push dispara ou não>
+> - **Origens:** <dev> e <produção>
+> - **Visual:** <de onde vêm as cores> · modo escuro <por classe X | por estado | só sistema | não tem>
 
-| Pacote | Onde | URL |
-| --- | --- | --- |
-| `@stg/central-de-bugs` | front | `https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.2.0/stg-central-de-bugs-0.2.0.tgz` |
-| `@stg/central-de-bugs-fastify` | servidor | `https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.2.0/stg-central-de-bugs-fastify-0.2.0.tgz` |
-| `@stg/central-de-bugs-cli` | dev (devDependency) | `https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.2.0/stg-central-de-bugs-cli-0.2.0.tgz` |
+Se algo ficou em dúvida, pergunte agora, numa AskUserQuestion só.
 
-Instale **os três agora**, antes de qualquer outro passo: a CLI gera as chaves no Passo 5 e
-sobe o simulador no Passo 12, e todos os comandos `npx central-de-bugs …` desta skill usam a
-cópia instalada no repositório.
+## Etapa 2 · Decidir o que capturar
 
-1. Com o gerenciador do repositório, no workspace certo de cada um. Com npm:
+Ainda sem alterar nada. O objetivo é que quem for corrigir o bug entenda o que aconteceu **sem
+precisar perguntar a quem relatou**. Leia `referencia.md` §E.
 
-   ```bash
-   # no workspace do front
-   npm install https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.2.0/stg-central-de-bugs-0.2.0.tgz
-   # no workspace do servidor
-   npm install https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.2.0/stg-central-de-bugs-fastify-0.2.0.tgz
-   # onde fica mais à mão, normalmente na raiz ou no servidor
-   npm install -D https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.2.0/stg-central-de-bugs-cli-0.2.0.tgz
-   ```
+1. **Explique o básico** em duas linhas: o widget já leva, sozinho, o print da tela, a tela e a
+   URL, navegador e sistema, os erros de console, as requisições que falharam e as últimas
+   navegações. Isso não precisa de código.
+2. **Monte o plano de captura**, com base no retrato da Etapa 1, procurando no código onde cada
+   dado já está em memória (contexts, stores, cache do react-query, params da rota):
 
-   Num repositório de um pacote só (front e servidor juntos), junte os dois primeiros:
-   `npm install <url do widget> <url do fastify>` e depois `npm install -D <url da cli>`. Em
-   workspaces npm, acrescente `-w <workspace>`. Com pnpm use `pnpm add` (`-D`, `--filter`), com
-   yarn use `yarn add` (`-D`): a URL é a mesma.
-2. Confira que `npx central-de-bugs --ajuda` responde, no diretório onde a CLI foi instalada.
-3. **Se falhar:**
-   - **404 na URL:** a URL foi digitada errada ou a versão não existe. Use as da tabela.
-   - **Erro de rede (`ENOTFOUND`, `ECONNRESET`, timeout):** a rede bloqueia o download do
-     GitHub (`github.com` redireciona para um domínio `*.githubusercontent.com`). Diga ao dev;
-     não tente contornar.
-   - **`ERESOLVE` com `react` ou `fastify`:** veja o parágrafo abaixo.
+   > **Plano de captura do <SaaS>**
+   >
+   > **Contexto no momento do relato** (lido do app, a pessoa não digita nada)
+   > | Item | De onde vem | Por que ajuda |
+   > | --- | --- | --- |
+   > | `lojista` | `useLojista()` | saber de qual cliente é o problema |
+   > | `catalogo_ativo` | param `:catalogoId` | reproduzir no mesmo catálogo |
+   > | `cnpj_do_lojista` 🔒 | `useLojista()` | sensível: fica fora da descrição da tarefa |
+   >
+   > **Eventos antes do bug** (o rastro do que a pessoa fez)
+   > | Evento | Onde entra | Por que ajuda |
+   > | --- | --- | --- |
+   > | `produto publicado` / `publicacao falhou` | `publicarProduto()` | ver a falha que antecedeu o relato |
+   >
+   > **Perguntas extras** (só se o código não souber; no máximo 2): <nenhuma | quais>
+   >
+   > **Fora do print** (`data-relato-ignorar`): <componentes com dado sensível>
 
-O widget pede React 19 ou mais novo, e o plugin pede Fastify 5. Se o SaaS estiver abaixo
-disso, pare e diga ao dev. Não atualize o React nem o Fastify por conta própria.
+3. Pergunte com AskUserQuestion: **"Aprovar o plano"**, **"Quero ajustar"** ou **"Só o básico
+   por enquanto"**. No ajuste, refaça só o que ele pediu. O plano aprovado é aplicado na Etapa 4.
 
-## Passo 3 — Entrar na Central (MCP) e listar as pastas
+## Etapa 3 · Conectar à Central
 
-Chame a ferramenta **`pastas_para_central_de_bugs`** do MCP da Central. Na
-primeira chamada, o Claude Code abre o navegador para o login na Central. Avise o dev antes:
-"vai abrir o navegador para você entrar na Central e autorizar".
-
-**Se a ferramenta não existir na sua lista:**
-
-- **O servidor `central-de-bugs` não está conectado ou pede autenticação:** peça ao dev para
-  rodar `/mcp`, escolher o `plugin:central-de-bugs:central-de-bugs` e autenticar.
-- **O dev já tinha o MCP da Central configurado à mão** (um `central-stg`, ou outro nome, com a
-  URL `https://app.stgcompany.com.br/api/mcp`): o Claude Code reconhece servidor duplicado pela
-  URL, não pelo nome, e fica com o configurado à mão. No `/mcp`, o do plugin aparece como
-  oculto (*hidden*), e as ferramentas vêm do manual — que pode ter sido autorizado sem o escopo
-  `central-de-bugs:instalar`. Dois casos:
-  - **o manual usa token pessoal da Central (PAT, cabeçalho `Authorization`)**: token pessoal
-    NÃO concede a instalação da Central de Bugs. Peça ao dev para remover o manual
-    (`claude mcp remove central-stg -s user`, trocando o nome e o escopo `-s` pelos dele —
-    `claude mcp list` mostra) e reiniciar o Claude Code; aí vale o do plugin, por OAuth;
-  - **o manual usa OAuth**: peça ao dev para, em `/mcp`, escolher esse servidor, limpar a
-    autenticação (*Clear authentication*) e autenticar de novo. Sem `oauth.scopes` na
-    configuração, o Claude Code pede os escopos que a Central anuncia, e o de instalar está
-    entre eles. Se a configuração manual fixar `oauth.scopes` sem `central-de-bugs:instalar`,
-    é mais simples removê-la, como no caso anterior.
-- **O servidor está conectado, mas as ferramentas da Central de Bugs não aparecem:** o login
-  foi feito sem o escopo `central-de-bugs:instalar` (o dev autorizou antes de instalar o plugin,
-  ou recusou essa permissão). Peça ao dev para, em `/mcp`, limpar a autenticação do servidor
-  da Central e autenticar de novo. Na tela de consentimento da Central tem de aparecer a
-  permissão de instalar a Central de Bugs.
-- **Um token restrito a algumas listas não instala:** se a ferramenta responder que o token
-  "está restrito a algumas listas", o MCP manual usa um PAT criado com recorte de listas.
-  Instalar cria listas novas, fora do recorte; o caminho é o do caso do PAT acima.
-- **O login é recusado, ou o MCP responde 403:** a pessoa precisa ter conta na Central e
-  acesso ao módulo MCP. Quem resolve isso é o administrador da Central (o Davi), que convida a
-  pessoa e libera o módulo. Pare até isso estar resolvido.
-
-**Lendo a resposta:** cada pasta vem com
-`{ id, caminho, pasta, space: { id, nome }, podeInstalar, jaTem: { bugs, melhorias }, conexao?: { codigo, nome } }`.
-`caminho` é o rótulo pronto "Space / Pasta"; `pasta` é só o nome da pasta; `podeInstalar` é
-`false` quando a pasta já tem "Bugs" ou "Melhorias".
-Só aparecem as pastas em que o dev tem **acesso total** (`manage`). Se a lista vier vazia, ele
-não tem acesso total em nenhuma pasta: quem administra o Space precisa compartilhar uma com
-ele como "acesso total".
-
-- Pasta com `conexao`: a Central de Bugs **já está instalada** ali, com aquele `codigo`. Não
-  instale de novo: **nunca** chame `instalar_central_de_bugs` para ela (a Central recusa, porque a
-  pasta já tem as listas) nem para outra pasta do mesmo SaaS (seriam duas conexões e dois pares de
-  listas para um produto só). Pergunte se é esse SaaS. Se for, reaproveite a conexão:
-  1. Confira se a chave desta máquina é a cadastrada. Rode
-     `npx central-de-bugs chave-publica --env <arquivo>` (só imprime a pública; se responder que
-     não há chave, gere com `npx central-de-bugs chaves --env <arquivo>`) e depois
-     `npx central-de-bugs verificar --central https://app.stgcompany.com.br --conexao <codigo> --env <arquivo>`.
-  2. **Passou:** pule para o **Passo 7** com o `codigo` existente.
-  3. **401 (chave):** a pública cadastrada é de outra chave. Nenhuma ferramenta MCP troca a
-     chave: peça ao dev para abrir **Configurações → Central de Bugs** na Central, escolher a
-     conexão, **Trocar a chave** e colar a linha que o `chave-publica` imprimiu. Depois rode o
-     `verificar` de novo e siga para o Passo 7.
-- Pasta com `jaTem.bugs` ou `jaTem.melhorias` (`podeInstalar: false`) e sem `conexao`: a
-  instalação vai recusar, porque nunca reaproveita uma lista em silêncio. Não ofereça essas
-  pastas como opção.
-
-## Passo 4 — Perguntar a pasta, o responsável e confirmar nome e origens
-
-Use **AskUserQuestion**, numa chamada só, com até 4 perguntas:
-
-1. **Pasta:** "Em qual pasta da Central ficam os bugs do <SaaS>?". Ofereça até 4 pastas
-   elegíveis (`podeInstalar: true`), começando pelas que têm o nome do SaaS, com o `caminho`
-   ("Space / Pasta") como rótulo. A opção
-   "Outra" deixa o dev digitar o nome de outra pasta da lista.
-2. **Responsável:** "Quem recebe os relatos novos?". Opções: "Eu mesmo" e "Outra pessoa".
-   Na opção "Outra", o dev digita o nome ou o e-mail. O responsável precisa ter acesso de
-   edição na pasta, e a Central confere isso.
-3. **Nome do SaaS**, como vai aparecer nas tarefas ("usuário do <nome>"), com o nome que você
-   achou como primeira opção.
-4. **Origens** (multiSelect): as que você achou, `https://…` de produção e
-   `http://localhost:<porta>` de desenvolvimento. Explique que `localhost` só vale enquanto a
-   conexão está em modo teste.
-
-## Passo 5 — Gerar o par de chaves
-
-1. Confirme que o arquivo `.env` do servidor (Passo 1) está ignorado:
+1. **Instalar os pacotes** (`referencia.md` §A). Os três agora: a CLI gera as chaves logo
+   abaixo. Confira com `npx central-de-bugs --ajuda`. Se falhar: `problemas.md` §1.
+2. **Login e pastas.** Avise: "vai abrir o navegador para você entrar na Central e autorizar".
+   Chame **`pastas_para_central_de_bugs`**. Se a ferramenta não existir ou o login falhar:
+   `problemas.md` §2. Para ler a resposta e tratar pasta que já tem conexão: `problemas.md` §3 e §4.
+3. **Escolhas do dev**, numa AskUserQuestion só:
+   - **Pasta:** "Em qual pasta da Central ficam os bugs do <SaaS>?". Até 4 pastas com
+     `podeInstalar: true`, primeiro as que têm o nome do SaaS, com o `caminho` como rótulo.
+   - **Responsável:** "Quem recebe os relatos novos?": "Eu mesmo" ou "Outra pessoa" (nome ou
+     e-mail; precisa editar a pasta).
+   - **Nome do SaaS** nas tarefas ("usuário do <nome>"), com o que você achou como primeira opção.
+   - **Origens** (multiSelect): produção `https://…` e `http://localhost:<porta>`. Explique que
+     `localhost` só vale enquanto a conexão está em modo teste.
+4. **Chaves.** Confirme que o `.env` do servidor está ignorado:
    `git check-ignore -q <arquivo> && echo ignorado`.
-   - Não está ignorado: mostre ao dev a linha que vai acrescentar ao `.gitignore` e aplique.
-   - Está versionado (`git ls-files --error-unmatch <arquivo>` acha): **pare**. Explique que ele
-     precisa sair do git (`git rm --cached <arquivo>`, um commit) antes de receber uma chave
-     privada. Os segredos que já estão nele também devem ser considerados expostos.
-2. Rode `npx central-de-bugs chaves --env <arquivo>`.
-   - O **stdout** tem uma linha só: a JWK **pública** (`{"kty":"EC","crv":"P-256","x":…,"y":…,"kid":…}`).
-     É ela que vai para a Central.
-   - O stderr confirma onde a privada foi gravada. A privada não aparece em lugar nenhum.
-   - Se responder que o arquivo **já tem** a chave, não troque. Use
-     `npx central-de-bugs chave-publica --env <arquivo>` para obter a pública dela. Só gere
-     outra (`--forcar`) se o dev pedir uma chave nova.
+   - Não ignorado: mostre a linha que vai acrescentar ao `.gitignore` e aplique.
+   - Versionado (`git ls-files --error-unmatch <arquivo>` acha): **pare**. Ele precisa sair do
+     git (`git rm --cached`, um commit) antes, e os segredos que já estão nele devem ser
+     considerados expostos.
 
-## Passo 6 — Criar as listas e a conexão na Central
-
-1. Chame **`instalar_central_de_bugs`** com `dry_run: true`:
+   Depois: `npx central-de-bugs chaves --env <arquivo>`. Se o arquivo não existir, a CLI o
+   cria (permissão 600). O stdout é uma linha só, a JWK **pública**. Se responder que já há
+   chave, não troque: use `npx central-de-bugs chave-publica --env <arquivo>`.
+   Diga ao dev: "a chave privada foi gravada no `<arquivo>` e não passou por mim. A pública é a
+   que vai para a Central."
+5. **Criar as listas e a conexão.** Chame **`instalar_central_de_bugs`** com `dry_run: true`:
 
    ```json
    {
-     "pasta": "<id da pasta escolhida>",
-     "nome_saas": "<nome do SaaS>",
+     "pasta": "<id da pasta>",
+     "nome_saas": "<nome>",
      "origens": ["https://app.exemplo.com.br", "http://localhost:5173"],
      "responsavel": "<omita para o próprio dev, ou nome/e-mail>",
      "chave_publica": { "kty": "EC", "crv": "P-256", "x": "…", "y": "…", "kid": "…" },
@@ -245,320 +220,215 @@ Use **AskUserQuestion**, numa chamada só, com até 4 perguntas:
    }
    ```
 
-   `chave_publica` é exatamente a linha que a CLI imprimiu. Nunca mande outra coisa nesse
-   campo.
+   Mostre o que a simulação descreveu (pasta, listas e status, responsável, origens, modo teste
+   ligado) e pergunte: "Criar agora" ou "Ajustar algo". Confirmado, repita **sem** `dry_run`.
+   Guarde o `codigo` (`cdb_…`, público) e mostre os links das listas. Erros: `problemas.md` §5.
 
-2. Mostre ao dev o que a simulação descreveu: a pasta, as listas "Bugs" e "Melhorias" com os
-   status do modelo, o responsável, as origens e o modo teste ligado. Peça a confirmação com
-   AskUserQuestion ("Criar agora" / "Ajustar algo").
-3. Confirmado, repita a chamada **sem** `dry_run`. A resposta traz
-   `{ conexao: { id, codigo, nome, modoTeste }, listas: { bug, sugestao }, links }`. Guarde o
-   `codigo` (`cdb_…`), que é público. Mostre ao dev os links das listas.
+## Etapa 4 · Implementar
 
-**Erros e o que fazer.** A ferramenta devolve o erro como **texto** (`isError`), sem código:
-reconheça pelo que a mensagem diz. Os códigos internos ficam na coluna do meio só como
-referência.
+Prepare tudo e mostre de uma vez, arquivo por arquivo, com o diff:
 
-| A mensagem diz | Código interno | O que fazer |
-| --- | --- | --- |
-| a pasta já tem "Bugs"/"Melhorias" | `MCP_LISTA_JA_EXISTE` | se a pasta tem `conexao`, é a mesma instalação: volte ao Passo 3 (pasta com `conexao`) e **não** instale em outra pasta. Sem `conexao`, volte ao Passo 4 com outra pasta. Nada foi criado |
-| o campo levou uma chave **privada** | `MCP_CHAVE_PRIVADA_RECUSADA` | pare. A chave está comprometida: `chaves --forcar` e recomece o Passo 6 com a pública nova |
-| não é uma JWK P-256 pública | `MCP_CHAVE_INVALIDA` | use a linha exata do stdout da CLI |
-| origem recusada (caminho, `http` fora do localhost, curinga, mais origens que o limite) | `MCP_ORIGEM_INVALIDA` | corrija para `https://host[:porta]` |
-| sem acesso total à pasta | `MCP_SEM_ACESSO_DE_GESTAO` | volte ao Passo 3 |
-| pasta (ou Space) arquivada | `MCP_PASTA_ARQUIVADA` | volte ao Passo 4 com uma pasta ativa |
-| pasta não encontrada | `MCP_PASTA_NAO_ENCONTRADA` | use o `id` que `pastas_para_central_de_bugs` devolveu |
-| ninguém com esse nome edita a pasta | `MCP_RESPONSAVEL_SEM_ACESSO` | escolha outra pessoa ou o próprio dev |
-| "corresponde a N …" com uma lista de ids | (ambiguidade) | repita com o id ou o e-mail certo da lista |
+1. **Servidor:** registrar o plugin do token com o getter de sessão da Etapa 1 (`referencia.md` §C).
+2. **Front:** montar `<CentralDeBugs>` na raiz autenticada, com a função `token` usando o mesmo
+   caminho autenticado que o SaaS já usa (`referencia.md` §D).
+3. **Plano de captura aprovado na Etapa 2:** `contexto()`, os `registrar()` nos fluxos,
+   `perguntas` e `data-relato-ignorar` (`referencia.md` §E).
+4. **O visual do <SaaS>** (`referencia.md` §F). Monte o `tema` a partir do que a Etapa 1 achou,
+   de preferência **apontando para as variáveis do SaaS** (`hsl(var(--primary))`), para o widget
+   acompanhar o modo escuro e futuras trocas de marca. Mapeie todas as cores, não só o acento.
+   Ligue o `esquema` ao modo escuro do SaaS, se houver. Se algo ocupa o canto direito, proponha
+   `posicao: 'esquerda'`. Mostre ao dev a tabela "cor do <SaaS> → parte do widget":
 
-## Passo 7 — Variáveis de ambiente
+   > | Parte do widget | Vem do <SaaS> |
+   > | --- | --- |
+   > | botão principal e foco | `--primary` (verde da marca) |
+   > | fundo do formulário | `--card` |
+   > | cantos | `--radius` (8px) |
+   > | modo escuro | acompanha a classe `dark` do `<html>` |
 
-**Desenvolvimento local, apontando para o simulador do kit:**
+   O contraste é medido na Etapa 6, com as cores de verdade.
 
-- `.env` do servidor:
-  `CENTRAL_DE_BUGS_CONEXAO=cdb_simulador00000000000`. A `CENTRAL_DE_BUGS_CHAVE_PRIVADA` já foi
-  gravada no Passo 5.
-- `.env` do front (o `envDir` do Vite):
-  `VITE_CENTRAL_DE_BUGS_CONEXAO=cdb_simulador00000000000` e
-  `VITE_CENTRAL_DE_BUGS_URL=http://localhost:4545`
+Pergunte: **"Aplicar tudo"**, **"Revisar arquivo por arquivo"** ou **"Quero ajustar"**. Aplique
+só o aprovado. Se o projeto tiver typecheck ou lint, rode-os nos arquivos tocados e corrija o que
+for seu.
 
-Use edição de linha específica (acrescentar ou substituir a linha da variável), **sem ler nem
-reescrever o arquivo inteiro**: ele tem a chave privada. Um jeito seguro é um script Node
-curto que reescreve só as linhas `CENTRAL_DE_BUGS_CONEXAO=`/`VITE_CENTRAL_DE_BUGS_*=` sem
-imprimir nada.
+## Etapa 5 · Variáveis de ambiente
 
-**`.env.example`** (este vai para o git): acrescente as quatro variáveis sem valor secreto,
-com um comentário dizendo de onde vem cada uma:
+Comece explicando a tabela das quatro variáveis (`referencia.md` §B): o que é cada uma, qual é
+secreta, o valor local e o de produção.
 
-```
-# Central de Bugs — servidor. A chave privada é gerada por `npx central-de-bugs chaves` e NUNCA vai para o git.
-CENTRAL_DE_BUGS_CHAVE_PRIVADA=
-CENTRAL_DE_BUGS_CONEXAO=<codigo cdb_… da instalação; cdb_simulador00000000000 no simulador>
-# Central de Bugs — front (vão para o navegador; nada secreto aqui)
-VITE_CENTRAL_DE_BUGS_CONEXAO=<o mesmo codigo>
-VITE_CENTRAL_DE_BUGS_URL=https://app.stgcompany.com.br
-```
+1. **Local (desenvolvimento, apontando para o simulador):**
+   - no `.env` do servidor: `CENTRAL_DE_BUGS_CONEXAO=cdb_simulador00000000000`. A chave privada
+     já está lá desde a Etapa 3;
+   - no `.env` do front (o `envDir` do Vite; num pacote só, o mesmo arquivo):
+     `VITE_CENTRAL_DE_BUGS_CONEXAO=cdb_simulador00000000000` e
+     `VITE_CENTRAL_DE_BUGS_URL=http://localhost:4545`.
 
-Acrescente os tipos em `vite-env.d.ts`, dentro de `ImportMetaEnv`:
-`readonly VITE_CENTRAL_DE_BUGS_CONEXAO?: string` e `readonly VITE_CENTRAL_DE_BUGS_URL?: string`.
+   Se o arquivo do front não existir, crie e confira que está ignorado. Grave linha a linha,
+   **sem ler o arquivo** (o comando está em `referencia.md` §B).
+2. **Para o repositório:** acrescente as quatro ao `.env.example` (crie se não existir) e os
+   tipos ao `vite-env.d.ts` (`referencia.md` §B).
+3. **Produção, num arquivo pronto para colar.** Acrescente `.env.central-de-bugs.producao` ao
+   `.gitignore` (mostre a linha) e rode:
 
-## Passo 8 — Servidor: registrar o plugin do token
+   ```bash
+   node "${CLAUDE_SKILL_DIR}/variaveis-de-producao.mjs" --env <.env do servidor> --conexao <codigo>
+   ```
 
-Registre o plugin **depois** da autenticação do SaaS, no mesmo contexto das rotas que leem a
-sessão:
+   O script grava o arquivo ao lado do `.env` do servidor (permissão 600, fora do git) com as
+   quatro variáveis de produção, a chave privada de verdade incluída, e imprime a tabela com a
+   chave mascarada. Mostre ao dev a tabela que ele imprimiu e diga:
 
-```ts
-import centralDeBugs from '@stg/central-de-bugs-fastify'
+   > ✓ As variáveis de produção estão prontas em `<arquivo>`. **Você vai colá-las no painel do
+   > deploy na Etapa 7**, logo antes de publicar. Eu aviso na hora.
 
-await app.register(centralDeBugs, {
-  // O getter de sessão que o SaaS JÁ usa. null → 401: sem usuário, sem relato.
-  usuario: async (req) => {
-    const sessao = await <o getter do SaaS>(req)
-    if (!sessao) return null
-    return { id: sessao.usuario.id, nome: sessao.usuario.nome, email: sessao.usuario.email }
-  },
-})
-```
+Feche a etapa listando o que ficou onde: o `.env` local (simulador), o `.env.example`, os tipos
+e o arquivo de produção.
 
-- A rota é `GET /api/central-de-bugs/token` e responde `text/plain` com o JWT. Se o plugin
-  ficar dentro de um contexto com `prefix`, o caminho ganha o prefixo. Nesse caso, ou passe
-  `rota` ou ajuste a função `token` do front.
-- `id` vira o `sub` do token, a identidade da pessoa em "Meus relatos". Use o id **estável**
-  do usuário, nunca o e-mail. Se o mesmo id puder se repetir entre clientes, use
-  `` `${tenantId}:${userId}` ``. O limite é de 128 caracteres.
-- `email` é opcional. Só serve para o aviso por e-mail, que vem desligado por padrão na
-  conexão. Pergunte ao dev se quer mandar.
-- Sem chave ou sem conexão no ambiente, o plugin **não derruba** o SaaS. Ele loga o erro no
-  boot e a rota passa a responder 503. Por isso, confira o log do servidor depois de subir.
-- Opções: `chavePrivada` e `conexao` (padrão: as variáveis de ambiente), `rota` (padrão
-  `/api/central-de-bugs/token`) e `duracaoS` (padrão 600, máximo 900).
+## Etapa 6 · Testar localmente
 
-Mostre o diff ao dev antes de aplicar.
+1. Suba o simulador **em segundo plano**:
+   `npx central-de-bugs simular --env <.env do servidor> --nome "<nome do SaaS>"`.
+   Ele responde em `http://localhost:4545`, com painel em `/painel`. Porta ocupada: `--porta` e
+   ajuste o `VITE_CENTRAL_DE_BUGS_URL`.
+2. Suba servidor e front com os scripts de dev do SaaS, também em segundo plano. Confira que o
+   servidor não logou erro da Central de Bugs no boot.
+3. Relate um bug de teste:
+   - **Com Playwright:**
+     `node "${CLAUDE_SKILL_DIR}/relatar-teste.mjs" --url http://localhost:<porta> --de <pasta com o playwright>`.
+     Abre um navegador visível: avise o dev para **fazer login nele**. O script abre o widget,
+     envia e imprime o relato. Com sessão salva pelos testes e2e (`storageState`), acrescente
+     `--estado <arquivo> --sem-janela`. Prefira em `--url` uma tela com entidade aberta, para o
+     `contexto()` ter o que mostrar.
+   - **Sem Playwright:** peça ao dev para abrir o SaaS, clicar em "Bug ou sugestão", relatar e
+     avisar. Leia `curl -s http://localhost:4545/painel/api/relatos` (o mais recente primeiro).
+4. **Mostre a `descricao` gerada**, que é exatamente o texto da tarefa na Central, e confira com
+   o dev: "Quem" diz "usuário do <SaaS>"; o **Contexto** tem os itens do plano, com os sensíveis
+   como `🔒 sensível — ver no relato`; **Últimos eventos** mostra os `registrar()` que rodaram; o
+   print não mostra nada que deveria estar ignorado.
+5. **Confira o visual.** Com Playwright, rode o mesmo script com `--visual`, sem enviar outro
+   relato:
+   `node "${CLAUDE_SKILL_DIR}/relatar-teste.mjs" --url http://localhost:<porta> --de <pasta com o playwright> --visual <pasta temporária> --so-visual`,
+   com `--classe-escuro <classe>` se o modo escuro do SaaS liga por classe no `<html>`. Ele grava
+   prints do formulário aberto (nos dois esquemas, com `--classe-escuro`) e do botão, e mede o
+   contraste dos pares de cor (sai com código 1 se algum ficar abaixo do mínimo). **Abra os
+   prints e mostre ao dev**, junto com a tabela de contraste. Par reprovado: ajuste só aquele no
+   `tema` (`referencia.md` §F, "Contraste") e meça de novo. Sem Playwright, peça ao dev para
+   abrir o widget nos dois temas do SaaS e dizer se combina.
+   Pergunte: **"Ficou com a cara do <SaaS>"** ou **"Quero ajustar"**.
+6. Opcional: mude o status e mande uma pergunta pelo painel. O botão ganha um ponto, e "Meus
+   relatos" mostra a conversa.
+7. Pare os processos que você subiu e apague a pasta dos prints. Botão não apareceu:
+   `problemas.md` §7.
 
-## Passo 9 — Front: montar o widget
+## Etapa 7 · Publicar e testar em produção
 
-Na raiz **autenticada** (Passo 1):
+Anuncie a etapa com o roteiro dela:
 
-```tsx
-import { CentralDeBugs } from '@stg/central-de-bugs'
+> Faltam 5 passos para o <SaaS> relatar em produção: (1) conferir a conexão real, (2) você colar
+> as variáveis no painel do deploy, (3) publicar, (4) eu conferir o deploy e (5) você mandar um
+> relato de teste. Aí ligamos de vez.
 
-const CONEXAO = import.meta.env.VITE_CENTRAL_DE_BUGS_CONEXAO
-const CENTRAL = import.meta.env.VITE_CENTRAL_DE_BUGS_URL
+**7.1 Conferir a conexão real**
 
-{CONEXAO && CENTRAL && (
-  <CentralDeBugs
-    conexao={CONEXAO}
-    central={CENTRAL}
-    token={async () => {
-      // O MESMO caminho autenticado que o SaaS já usa (proxy, credentials, cliente próprio).
-      const r = await fetch('/api/central-de-bugs/token', { credentials: 'include' })
-      if (!r.ok) throw new Error(`token da Central de Bugs: ${r.status}`)
-      return r.text()
-    }}
-    versao={import.meta.env.VITE_VERSAO /* se o SaaS tiver um SHA/versão do build */}
-    contexto={/* Passo 10 */}
-  />
-)}
-```
-
-Props disponíveis: `conexao`, `central`, `token` (obrigatórias), `contexto`, `perguntas`,
-`versao`, `tela`, `raizDoPrint`, `posicao` (`'direita' | 'esquerda'`), `textos` e `tema`.
-As duas são **funções**, não valores: o widget as chama na hora do relato, para pegar a tela
-daquele momento.
-
-- `tela?: () => string`: use se o SaaS tiver um título de tela melhor que o `document.title`.
-  Nunca escreva `tela="Pedidos › #812"` nem `tela={titulo}`. O TypeScript recusa (TS2322), e
-  num projeto sem typecheck o widget falha ao chamar um texto como função.
-- `raizDoPrint?: () => HTMLElement | null`: use se o conteúdo rola dentro de um container, e
-  não no `body`. Se a função devolver `null`, o print usa o `body`. Passe o tipo ao
-  `querySelector` (`<HTMLElement>`): sem ele, o retorno é `Element | null`, e o TypeScript
-  recusa.
-
-```tsx
-<CentralDeBugs
-  /* …as props obrigatórias acima… */
-  tela={() => (pedido ? `Pedidos › #${pedido.id}` : 'Pedidos')}
-  raizDoPrint={() => document.querySelector<HTMLElement>('main')}
-/>
-``` Para abrir a Central de um menu de ajuda do SaaS, use
-`abrirCentralDeBugs('bug')` ou `abrirCentralDeBugs('sugestao', 'meus')`, que são exportados
-pelo mesmo pacote.
-
-Mostre o diff ao dev antes de aplicar.
-
-## Passo 10 — Propor `contexto()`, `registrar()` e perguntas (o dev aprova)
-
-Leia o código para achar onde ficam **o cliente/tenant**, **o usuário**, **o plano** e **as
-entidades da tela atual**: contexts do React, stores (zustand, redux), cache do react-query e
-params da rota. Proponha:
-
-**`contexto()`**: lido no momento do relato e nunca perguntado à pessoa. Regras do contrato:
-
-- chave em `snake_case` (`^[a-z][a-z0-9_]{0,39}$`), no máximo 20 itens;
-- valor primitivo (texto até 500, número, booleano, `null`) ou
-  `{ valor, rotulo?, id?, sensivel? }`;
-- marque `sensivel: true` em CPF, CNPJ de pessoa física, telefone, endereço, e-mail de cliente
-  final e dado de pagamento. O valor sensível **não entra na descrição da tarefa**: fica só na
-  ficha do relato, para quem já lê a tarefa;
-- **nunca** coloque token, senha, chave de API ou cookie;
-- tem de ser barato e síncrono, e não pode lançar erro. Leia o que já está em memória.
-
-Exemplo para o **Acelera Catálogo**:
-
-```tsx
-contexto={() => ({
-  lojista: { valor: lojista.nome, id: lojista.id },
-  plano: lojista.plano,
-  catalogo_ativo: catalogo ? { valor: catalogo.nome, id: catalogo.id } : null,
-  canal_de_venda: canalSelecionado ?? null,            // 'mercado_livre', 'shopee', …
-  produto_aberto: produto ? { valor: produto.titulo, id: produto.sku } : null,
-  cnpj_do_lojista: { valor: lojista.cnpj, sensivel: true },
-})}
+```bash
+npx central-de-bugs verificar --central https://app.stgcompany.com.br --conexao <codigo> --env <.env do servidor> --origem <origem de produção>
 ```
 
-**`registrar(nome, detalhes)`**: os últimos 30 eventos do domínio, que entram em "Últimos
-eventos" do relato de **bug**. Proponha 3 a 6 pontos nos fluxos críticos, logo depois do
-sucesso ou da falha. Os detalhes são planos, com até 10 chaves e sem dado pessoal. Exemplo para
-o Acelera Catálogo:
+Confirma chave, código, modo teste e CORS da origem de produção. Falhou: `problemas.md` §6.
 
-```ts
-import { registrar } from '@stg/central-de-bugs'
+**7.2 Variáveis no ambiente de produção.** Este é o momento. Rode o script de novo com `--copiar`
+(ele regrava o arquivo e põe o conteúdo na área de transferência):
 
-registrar('catalogo trocado', { catalogo_id: catalogo.id, canal: catalogo.canal })
-registrar('produto publicado', { produto_id: produto.id, canal: 'mercado_livre', variacoes: produto.variacoes.length })
-registrar('publicacao falhou', { produto_id: produto.id, canal: 'shopee', motivo: erro.code ?? 'desconhecido' })
-registrar('importacao concluida', { arquivo_linhas: linhas, erros: falhas })
+```bash
+node "${CLAUDE_SKILL_DIR}/variaveis-de-producao.mjs" --env <.env do servidor> --conexao <codigo> --copiar
 ```
 
-**`perguntas`**, opcional e com parcimônia: no máximo 1 ou 2, e só se a resposta não puder ser
-lida do código. Formato:
-`{ chave, rotulo, tipo: 'texto' | 'opcao' | 'numero' | 'sim_nao', opcoes?, obrigatoria?, so_em?: 'bug' | 'sugestao', ajuda? }`.
+Mostre a tabela que ele imprimiu e dê a instrução em destaque, adaptada ao deploy da Etapa 1:
 
-Em `tipo: 'opcao'`, cada item de `opcoes` é texto (`'Matriz'`) ou
-`{ valor, rotulo?, icone?, descricao? }` (pacotes 0.2.0+). O que vai gravado é sempre o
-`valor` (texto, único); `rotulo` é o que a pessoa lê; `icone` é um nó React; `descricao` é uma
-linha menor no seletor. Até 6 opções viram pílulas, mais que isso um seletor com busca (a
-partir de 9). Quando o SaaS já usa um pacote de ícones (veja o `package.json` do front:
-`lucide-react`, `@heroicons/react`…), proponha ícones **desse** pacote, ~15px, sem cor fixa
-(o widget pinta com `currentColor`). Nunca instale um pacote de ícones só para isso; sem um,
-deixe as opções sem ícone. Exemplo com lucide-react:
+> ### ⚠️ Antes de publicar: cole as variáveis de produção
+>
+> Sem elas, o botão não aparece em produção. O conteúdo já está na sua área de transferência
+> (se não estiver, abra `<arquivo>` no editor e copie tudo).
+>
+> **Coolify:** aplicação do SaaS → *Environment Variables* → *Developer view* → cole no fim →
+> *Save*. Marque as duas `VITE_` como *Build Variable*.
+> **Vercel / outros:** cole em *Environment Variables* (a maioria aceita colar um `.env`
+> inteiro), com as `VITE_` disponíveis no build.
+> **Front e servidor em deploys separados:** as duas primeiras vão no servidor e as duas `VITE_`
+> no front.
+>
+> A chave privada só vai para o painel. Não cole em chat, issue nem mensagem.
 
-```tsx
-import { Bike, Store, Truck } from 'lucide-react'
+Pergunte com AskUserQuestion: **"Já colei e salvei"**, **"Front e servidor são separados, me
+ajude"** ou **"Não tenho acesso ao painel"**. Sem acesso, pare aqui e diga o que pedir a quem
+administra o deploy: as quatro variáveis, com o arquivo entregue por um canal seguro.
 
-perguntas={[{
-  chave: 'entrega',
-  rotulo: 'Como o pedido chega ao cliente?',
-  tipo: 'opcao',
-  so_em: 'bug',
-  opcoes: [
-    { valor: 'transportadora', rotulo: 'Transportadora', icone: <Truck size={15} />, descricao: 'Correios ou frete contratado' },
-    { valor: 'motoboy', rotulo: 'Motoboy', icone: <Bike size={15} /> },
-    { valor: 'retirada', rotulo: 'Retirada na loja', icone: <Store size={15} /> },
-  ],
-}]}
+**7.3 Publicar.** Mostre o que vai no commit (`git status --short`): código, `package.json`,
+lock, `.env.example`, `.gitignore` e `vite-env.d.ts`. Confira que nenhum `.env*` com segredo
+está na lista (`git check-ignore`). Pergunte: **"Commitar e fazer push para <branch>"**, **"Eu
+mesmo faço o commit"** ou **"Ainda não"**. Com o sim, commite com uma mensagem clara
+("feat: Central de Bugs (widget, token e contexto)") e faça o push. Se o push não dispara o
+deploy (Etapa 1), peça ao dev para disparar. Espere ele avisar que o deploy terminou.
+
+**7.4 Conferir o deploy.** Sem sessão, a rota do token diz se o servidor está configurado:
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' https://<origem de produção>/api/central-de-bugs/token
 ```
 
-Use `valor` estável em `snake_case` (é o que aparece na tarefa e no que a triagem lê) e deixe o
-texto bonito para o `rotulo`.
+**401** é o esperado: plugin no ar e com as variáveis. Qualquer outro código: `problemas.md` §8.
+Para confirmar que o front foi construído com as `VITE_`, procure o código da conexão nos
+scripts da página inicial:
 
-Mostre tudo junto ao dev (o diff de cada arquivo) e pergunte com AskUserQuestion: "Aplicar como
-está", "Aplicar sem as perguntas extras" ou "Quero ajustar". Aplique só o que ele aprovar.
-
-## Passo 11 — Telas sensíveis: `data-relato-ignorar`
-
-O print automático sai do SaaS para a Central. Procure telas e componentes com dado sensível:
-`grep -ril` por `cpf`, `cnpj`, `cartao`, `card`, `pix`, `iban`, `senha`, `password`, `token`,
-`salario`, `saldo`, `extrato`, `telefone`, `endereco` e `nascimento` nos componentes do front.
-Para cada achado, proponha `data-relato-ignorar` no **menor container** que tem o dado (o
-painel, o card, a tabela), e não na página inteira. O elemento com esse atributo nunca aparece
-no print. A pessoa ainda pode tarjar o print no editor de marcação antes de enviar.
-
-Liste as propostas para o dev (arquivo, elemento, por quê) e aplique as que ele aprovar.
-
-## Passo 12 — Testar no simulador
-
-1. Garanta os valores do simulador no `.env` local (Passo 7).
-2. Suba o simulador **em segundo plano**:
-   `npx central-de-bugs simular --env <arquivo .env do servidor> --nome "<nome do SaaS>"`.
-   Ele mostra `http://localhost:4545` e o painel em `/painel`. Se a porta estiver ocupada, use
-   `--porta` e ajuste o `VITE_CENTRAL_DE_BUGS_URL`.
-3. Suba o servidor e o front do SaaS com os scripts de dev dele, também em segundo plano.
-   Confira que o servidor não logou erro da Central de Bugs no boot.
-4. Relate um bug de teste:
-   - **Com Playwright no repositório:**
-     `node "${CLAUDE_SKILL_DIR}/relatar-teste.mjs" --url http://localhost:<porta do Vite> --de <pasta com o playwright>`.
-     O script abre um navegador visível. Avise o dev para **fazer login nele**. Depois disso, o
-     script abre o widget, preenche e envia o bug, e imprime o relato que o simulador recebeu.
-     Se os testes e2e do SaaS já salvam uma sessão logada (`storageState`, por exemplo
-     `playwright/.auth/user.json`), acrescente `--estado <arquivo> --sem-janela`, e nesse caso
-     ninguém precisa clicar. Prefira em `--url` o link direto de uma tela com entidade aberta
-     (por exemplo `http://localhost:5173/catalogos/12/produtos/812`). Assim o `contexto()`
-     tem o que mostrar. Os `registrar()` só aparecem se algum fluxo rodou. Para vê-los, peça
-     ao dev um relato à mão (opção abaixo) depois de usar a tela.
-   - **Sem Playwright:** peça ao dev para abrir o SaaS, clicar em "Bug ou sugestão", relatar um
-     bug qualquer e avisar. Depois leia `curl -s http://localhost:4545/painel/api/relatos`
-     (o mais recente vem primeiro).
-5. **Mostre ao dev a `descricao` gerada**: é exatamente o texto que a tarefa terá na Central.
-   Confira com ele que:
-   - "Quem" diz "usuário do <nome do SaaS>";
-   - o bloco **Contexto do <SaaS>** tem os itens do `contexto()`, e os sensíveis aparecem como
-     `🔒 sensível — ver no relato`;
-   - **Últimos eventos** mostra os `registrar()` que rodaram;
-   - o print está nos anexos e não mostra nada que deveria estar ignorado.
-6. Para ver a volta para quem relatou, mude o status e mande uma pergunta pelo painel
-   (`http://localhost:4545/painel`). O botão do widget ganha um ponto, e "Meus relatos" mostra o
-   status e a conversa.
-7. Pare os processos que você subiu.
-
-Se o botão não aparecer, olhe nesta ordem: o log do servidor (rota do token 401/503), o console
-do navegador (avisos `[central-de-bugs]`) e as variáveis `VITE_` (o Vite só as lê ao subir).
-
-## Passo 13 — Conferir a conexão real
-
-Com o `codigo` da instalação, rode:
-
-```
-npx central-de-bugs verificar --central https://app.stgcompany.com.br --conexao <codigo> --env <arquivo> --origem <origem de produção>
+```bash
+curl -s https://<origem de produção>/ | grep -oE 'src="[^"]+\.js"' | sed -E 's/src="([^"]+)"/\1/' \
+  | while read -r js; do curl -s "https://<origem de produção>${js}" | grep -q '<codigo>' && echo "✓ código no build: $js"; done
 ```
 
-O comando assina um token com a chave local e chama a Central de verdade. Ele confirma que a
-pública cadastrada é a desta chave, que a conexão está em modo teste e que a origem de produção
-está liberada no CORS. Se falhar, ele explica o motivo (401 = chave, 404 = código, 410 =
-desligada, 403 = origem).
+Achou: ✓. Não achou não prova nada (o widget pode estar num chunk carregado depois). O relato
+do passo seguinte decide.
 
-## Passo 14 — O que fica com o dev (lista final)
+**7.5 Relato real, ainda em modo teste.** Peça:
 
-Termine com esta lista, preenchida com os valores reais:
+> Abra o <SaaS> em produção, entre com seu usuário, clique em **"Bug ou sugestão"** e relate um
+> bug qualquer ("teste de instalação"). Como estamos em modo teste, **nada vira tarefa**: o
+> widget mostra a descrição que a tarefa teria. A tela da conexão na Central também lista os
+> últimos testes.
 
-1. **Coolify, aplicação do SaaS:**
-   - servidor (runtime): `CENTRAL_DE_BUGS_CHAVE_PRIVADA` e `CENTRAL_DE_BUGS_CONEXAO=<codigo>`.
-     O dev copia o valor da chave privada **do próprio `.env`, pelo editor dele**, direto para o
-     painel do Coolify. Nunca pela conversa.
-   - front (**variável de build**, porque o Vite embute no build):
-     `VITE_CENTRAL_DE_BUGS_CONEXAO=<codigo>` e
-     `VITE_CENTRAL_DE_BUGS_URL=https://app.stgcompany.com.br`.
-   - nada para os pacotes: o `npm ci` do build baixa os `.tgz` pelas URLs públicas que estão
-     no lock, sem token.
-2. **Commit** do código, do `package.json` e do lock, do `.env.example` e do `.gitignore`. O
-   `.env` nunca entra.
-3. **Deploy.**
-4. **Um relato real em produção**, ainda em modo teste. Nada vira tarefa: a confirmação do
-   widget mostra a descrição, e a tela da conexão na Central lista os últimos testes.
-5. **Sair do modo teste**: pedir ao agente "sai do modo teste da Central de Bugs" (seção
-   abaixo) ou desligar na tela da conexão. A partir daí os relatos viram tarefas, e
-   `localhost` deixa de ser aceito pela Central real.
+Pergunte: **"Apareceu a descrição"**, **"O botão não apareceu"** ou **"Deu erro ao enviar"**.
+Nos dois últimos casos, `problemas.md` §8.
+
+**7.6 Ligar de vez.** Siga a seção "Sair do modo teste" abaixo (com `dry_run` antes). Depois,
+ofereça: "Quer mandar um relato de verdade agora, para ver a tarefa nascer na lista Bugs?
+Depois é só concluí-la."
+
+**7.7 Fechamento.** Pergunte se pode apagar o arquivo de produção, agora que as variáveis estão
+no painel:
+`node "${CLAUDE_SKILL_DIR}/variaveis-de-producao.mjs" --env <.env do servidor> --remover`.
+Termine com o resumo:
+
+> ✅ **Central de Bugs instalada no <SaaS>**
+> - **Listas:** <links de Bugs e Melhorias> · responsável: <pessoa>
+> - **Conexão:** `<codigo>` · modo teste desligado
+> - **Captura:** <n> itens de contexto, <n> eventos, <n> perguntas, <n> áreas fora do print
+> - **Visual:** cores e cantos do <SaaS>, modo escuro <acompanhando | fixo>, contraste conferido
+> - **Variáveis:** local no `<arquivo>` (simulador) e produção no painel do deploy
+> - **Desenvolvimento:** `npx central-de-bugs simular` sobe o simulador local
+> - **Daqui em diante:** a skill `triar-relatos` organiza o que chega, e `corrigir-relato`
+>   corrige um relato a partir da tarefa.
 
 ## Sair do modo teste
 
 1. Descubra o `codigo` da conexão (`CENTRAL_DE_BUGS_CONEXAO` no `.env.example` ou nas variáveis
-   do deploy; se não achar, use `pastas_para_central_de_bugs`, que mostra a conexão de cada
-   pasta).
-2. Chame **`sair_do_modo_teste`** com `{ "conexao": "<codigo>", "dry_run": true }` e mostre ao
-   dev o que muda: a partir dali, cada relato vira tarefa na lista e o responsável é avisado.
-3. Confirmado, repita sem `dry_run`.
-4. Lembre o dev de que o widget local (`http://localhost`) deixa de funcionar contra a Central
-   real. Em desenvolvimento, ele passa a usar o simulador.
+   do deploy; se não achar, `pastas_para_central_de_bugs` mostra a conexão de cada pasta).
+2. Confirme que um relato real em produção já foi conferido. Se não foi, proponha a Etapa 7.5
+   antes.
+3. Chame **`sair_do_modo_teste`** com `{ "conexao": "<codigo>", "dry_run": true }` e mostre o que
+   muda: cada relato passa a virar tarefa na lista, e o responsável é avisado.
+4. Confirmado, repita sem `dry_run`.
+5. Lembre o dev de que `http://localhost` deixa de valer na Central real. Em desenvolvimento,
+   use o simulador.
 
-Para alterar a conexão de outras formas (trocar chave, origens ou responsável, ou desligar),
-o caminho é a tela da conexão na Central. O MCP não faz isso.
+Para alterar a conexão de outras formas (trocar chave, origens ou responsável, ou desligar), o
+caminho é a tela da conexão na Central. O MCP não faz isso.

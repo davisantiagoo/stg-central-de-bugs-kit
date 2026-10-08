@@ -1,7 +1,7 @@
 {
   "name": "central-de-bugs",
   "displayName": "Central de Bugs (STG)",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Liga um SaaS à Central de Bugs da STG: os relatos de quem usa o SaaS viram tarefas nas listas Bugs e Melhorias da Central. Traz o MCP da Central (OAuth) e as skills instalar-central-de-bugs, corrigir-relato e triar-relatos.",
   "author": {
     "name": "STG",
