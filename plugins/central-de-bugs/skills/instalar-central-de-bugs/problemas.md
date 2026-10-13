@@ -13,36 +13,40 @@ Explique ao dev em uma ou duas frases, sem despejar a tabela inteira.
 
 ## 2. A ferramenta `pastas_para_central_de_bugs` não aparece ou o login falha
 
-- **O servidor pede autenticação:** não mande o dev para o `/mcp`. Gere o link com a
-  ferramenta `authenticate` do servidor (SKILL.md, Etapa 3, passo 2). Só se ela devolver erro
-  ("Failed to start OAuth flow"), diga o erro em uma frase e aí sim peça o `/mcp`, escolhendo o
-  servidor da Central e *Authenticate*.
-- **Nem as ferramentas da Central nem `authenticate` aparecem:** o servidor da Central está
-  desligado neste projeto. Isso acontece quando o dev tem um MCP da Central configurado à mão
-  (`central-stg`, por exemplo) e o desligou aqui: o do plugin some junto, porque o Claude Code
-  trata os dois como o mesmo servidor (mesma URL). Peça para religar, em uma frase: "digite
-  `/mcp`, escolha `<nome>` e *Enable*". Depois disso as ferramentas aparecem sem novo login.
-- **O dev já tinha o MCP da Central configurado à mão** (um `central-stg`, ou outro nome, com a
-  URL `https://app.stgcompany.com.br/api/mcp`): o Claude Code reconhece duplicata pela URL e
-  fica com o manual, que pode ter sido autorizado sem o escopo `central-de-bugs:instalar`.
+- **O servidor pede autenticação:** não mande o dev para o `/mcp`. Siga `login.md` §1 a §3:
+  você gera o link, ele clica.
+- **Conta errada:** `login.md` §4. Na tela de autorização, "Não é você?" troca a conta sem
+  perder o pedido.
+- **Nem as ferramentas da Central nem o login aparecem, e `claude mcp list` mostra o servidor
+  `✔ Connected`:** o servidor está desligado neste projeto. Acontece quando o dev tem um MCP da
+  Central configurado à mão (`central-stg`, por exemplo) e o desligou aqui: o do plugin some
+  junto, porque o Claude Code trata os dois como o mesmo servidor (mesma URL). Religue você
+  mesmo: em `~/.claude.json`, tire o nome do servidor da lista `disabledMcpServers` do projeto
+  (`projects["<caminho do projeto>"]`, faça cópia do arquivo antes) e peça um recarregamento da
+  janela. Não precisa de login novo.
+- **O dev já tinha o MCP da Central configurado à mão** (mesma URL): o Claude Code fica com o
+  manual, que pode ter sido autorizado sem o escopo `central-de-bugs:instalar`.
   - **manual com token pessoal (PAT, cabeçalho `Authorization`)**: PAT NÃO concede a
-    instalação. Peça para remover (`claude mcp remove central-stg -s user`, com o nome e o
-    escopo dele; `claude mcp list` mostra) e reiniciar o Claude Code.
-  - **manual com OAuth**: em `/mcp`, escolher o servidor, *Clear authentication* e autenticar
-    de novo. Se a configuração fixar `oauth.scopes` sem `central-de-bugs:instalar`, remova-a.
-- **Conectado, mas sem as ferramentas da Central de Bugs:** o login foi feito sem o escopo de
-  instalar. Em `/mcp`, limpar a autenticação e autenticar de novo. Na tela de consentimento
-  tem de aparecer a permissão de instalar a Central de Bugs.
+    instalação. Proponha remover (`claude mcp remove <nome> -s <escopo>`; `claude mcp get <nome>`
+    mostra o escopo, sem expor o token) e, com o sim do dev, remova e faça o login (`login.md`).
+  - **manual com OAuth sem o escopo:** `claude mcp logout <nome>` e login de novo (`login.md`
+    §2). Se a configuração fixar `oauth.scopes` sem `central-de-bugs:instalar`, acrescente-o.
 - **"O token está restrito a algumas listas":** é um PAT com recorte. Mesmo caminho do PAT.
-- **Login recusado ou 403:** a pessoa precisa de conta na Central e do módulo MCP. Quem
-  resolve é o administrador da Central (o Davi). Pare até isso estar resolvido.
+- **Login recusado ou 403 "Sem acesso ao módulo MCP":** a conta precisa de acesso ao módulo MCP
+  na Central. Quem libera é o administrador da Central (o Davi). Se o dev tem outra conta com
+  acesso, troque (`login.md` §4); senão, pare até isso estar resolvido.
 
 ## 3. A lista de pastas
 
-Cada pasta vem com
+A resposta vem como `{ voce: { email }, pastas: [...], spaces: [...] }`. Cada pasta vem com
 `{ id, caminho, pasta, space: { id, nome }, podeInstalar, jaTem: { bugs, melhorias }, conexao?: { codigo, nome } }`.
-Só aparecem pastas com **acesso total** (`manage`). Lista vazia = o dev não tem acesso total em
-nenhuma; quem administra o Space precisa compartilhar uma com ele como "acesso total".
+Só aparecem pastas com **acesso total** (`manage`). `spaces` são os Spaces onde o dev pode
+**criar** a pasta do SaaS (gestor ou owner, com acesso total ao Space): ofereça criar a pasta
+lá (`nova_pasta`) em vez de pedir que alguém a crie.
+
+- **`pastas` e `spaces` vazios:** o dev não administra nada. Se ele tem outra conta com acesso,
+  troque (`login.md` §4). Senão, quem administra o Space precisa compartilhá-lo com ele como
+  "acesso total" (ou instalar).
 
 - **`jaTem` sem `conexao` (`podeInstalar: false`):** a instalação vai recusar. Não ofereça.
 - **Pasta com `conexao`: já está instalada.** Veja a seção 4.
@@ -75,6 +79,10 @@ A ferramenta devolve o erro como **texto** (`isError`). Reconheça pela mensagem
 | pasta não encontrada | `MCP_PASTA_NAO_ENCONTRADA` | use o `id` de `pastas_para_central_de_bugs` |
 | ninguém com esse nome edita a pasta | `MCP_RESPONSAVEL_SEM_ACESSO` | outra pessoa ou o próprio dev |
 | "corresponde a N …" com ids | (ambiguidade) | repita com o id ou o e-mail certo |
+| criar pasta exige gestor com acesso total ao Space | `MCP_SEM_ACESSO_DE_GESTAO` | escolha um Space de `spaces`, ou uma pasta existente |
+| o Space já tem a pasta "X" (id …) | `MCP_PASTA_JA_EXISTE` | instale nessa pasta pelo id, ou outro nome para a nova |
+| Space não encontrado / arquivado | `MCP_SPACE_NAO_ENCONTRADO` / `MCP_SPACE_ARQUIVADO` | use um Space de `spaces` |
+| informe a pasta OU a pasta nova | `MCP_PASTA_AMBIGUA` | mande só `pasta` ou só `nova_pasta` |
 
 ## 6. `verificar` falha
 

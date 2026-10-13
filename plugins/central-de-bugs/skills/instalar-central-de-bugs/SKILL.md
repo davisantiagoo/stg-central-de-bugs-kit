@@ -19,6 +19,7 @@ ver antes.
 Se o pedido for só **sair do modo teste**, pule para a seção "Sair do modo teste" no fim.
 
 Arquivos de apoio, nesta pasta (`${CLAUDE_SKILL_DIR}`). Leia só a seção que a etapa indicar:
+- `login.md`: login na Central pelo link, e troca de conta;
 - `referencia.md`: pacotes, variáveis, modelos de código e regras de captura;
 - `problemas.md`: o que fazer quando algo falha;
 - `variaveis-de-producao.mjs`: monta o arquivo de variáveis de produção sem expor a chave;
@@ -106,6 +107,21 @@ Crie um checklist com as 7 etapas (a ferramenta de tarefas, se disponível) e ma
 **Ao terminar cada etapa**, feche com uma linha do que ficou pronto ("✓ Conectado: listas
 criadas na pasta X, código `cdb_…`"). Use AskUserQuestion sempre que a resposta for uma
 escolha. Quando algo falhar, consulte `problemas.md` e explique em uma ou duas frases.
+
+**Faça o máximo pelo dev.** Tudo que você consegue fazer (gerar o link de login, criar a pasta,
+gerar as chaves, escrever o código, montar as variáveis) é você que faz. Pedir ao dev um passo
+manual que você mesmo conseguiria é falha da instalação, não prudência.
+
+## Antes da Etapa 1 · Conferir o login na Central
+
+Logo depois da mensagem de abertura, confira se esta sessão já fala com a Central: procure
+`pastas_para_central_de_bugs` (ToolSearch, se não estiver na lista de ferramentas).
+
+- **Existe:** siga para a Etapa 1 sem falar de login.
+- **Não existe:** faça o login agora, antes de qualquer trabalho, seguindo `login.md` §1 a §3.
+  Fora do terminal a sessão precisa ser recarregada uma vez para enxergar o login novo, e é
+  melhor que isso aconteça aqui do que no meio da Etapa 3. Quando o dev voltar com "continuar a
+  instalação da Central de Bugs", pule a abertura e siga para a Etapa 1.
 
 ---
 
@@ -210,43 +226,18 @@ precisar perguntar a quem relatou**. Leia `referencia.md` §E.
 
 1. **Instalar os pacotes** (`referencia.md` §A). Os três agora: a CLI gera as chaves logo
    abaixo. Confira com `npx central-de-bugs --ajuda`. Se falhar: `problemas.md` §1.
-2. **Login e pastas.** O login é seu de ponta a ponta: o dev só clica num link. Nunca mande
-   ele rodar `/mcp`, nunca diga que "esta sessão não consegue abrir o OAuth" e nunca pare a
-   instalação por causa do login sem antes ter tentado o caminho abaixo.
-
-   **a) Já está logado?** Procure `pastas_para_central_de_bugs` (se não estiver na lista de
-   ferramentas, busque com ToolSearch, consulta `pastas_para_central_de_bugs`). Se ela existe,
-   chame direto e não fale de login: siga para a leitura das pastas.
-
-   **b) Não está: gere o link você mesmo.** Quando um servidor MCP pede login, o Claude Code
-   expõe no lugar das ferramentas dele uma ferramenta `authenticate`. Procure com ToolSearch,
-   consulta `authenticate`, e use a do servidor da Central: a do plugin é
-   `mcp__plugin_central-de-bugs_central-de-bugs__authenticate`; se o dev tem um MCP da Central
-   configurado à mão (`central-stg` ou outro nome), é a desse servidor. Chame-a. Ela devolve a
-   URL de autorização. Mande ao dev **o link pronto, clicável**, com esta mensagem:
-
-   > Para conectar à Central, abra este link e entre com o seu login de sempre:
-   >
-   > **[Entrar na Central](<url>)**
-   >
-   > Na tela de autorização, confira que aparece **"Instalar a Central de Bugs"** e autorize.
-   > Depois é só me dizer "pronto": eu sigo sozinho e listo as pastas.
-
-   Se a ferramenta disser que a autenticação foi concluída em silêncio, não mande link nenhum:
-   siga para `pastas_para_central_de_bugs`.
-
-   **c) Depois do "pronto".** Numa sessão local o navegador volta para
-   `http://localhost:<porta>/callback` e o Claude Code conclui sozinho: busque de novo
-   `pastas_para_central_de_bugs` e chame. Se o dev disser que a página final deu erro de
-   conexão (sessão remota), peça a URL inteira da barra de endereço e passe-a como
-   `callback_url` para a ferramenta `complete_authentication` do mesmo servidor.
-
-   Se não existir `authenticate` nem as ferramentas da Central, ou se o login falhar:
-   `problemas.md` §2. Para ler a resposta e tratar pasta que já tem conexão: `problemas.md` §3
-   e §4.
+2. **Pastas.** Chame **`pastas_para_central_de_bugs`** e diga, em uma linha, com qual conta
+   você está: "Conectado à Central como `<voce.email>`". Se o dev disser que é a conta errada,
+   ou que a pasta que ele quer está em outra conta: `login.md` §4, sem parar a instalação. Se a
+   ferramenta não existir: `login.md` §1 a §3. Para ler a resposta e tratar pasta que já tem
+   conexão: `problemas.md` §3 e §4.
 3. **Escolhas do dev**, numa AskUserQuestion só:
-   - **Pasta:** "Em qual pasta da Central ficam os bugs do <SaaS>?". Até 4 pastas com
-     `podeInstalar: true`, primeiro as que têm o nome do SaaS, com o `caminho` como rótulo.
+   - **Pasta:** "Em qual pasta da Central ficam os bugs do <SaaS>?". Até 3 pastas com
+     `podeInstalar: true`, primeiro as que têm o nome do SaaS, com o `caminho` como rótulo, e,
+     se `spaces` não estiver vazio, a opção **"Criar pasta nova '<SaaS>'"** (no Space do SaaS,
+     se houver um com o nome dele; senão, pergunte o Space junto). Se o dev pedir uma pasta nova,
+     ou nenhuma pasta servir, **você cria**: `instalar_central_de_bugs` com `nova_pasta`, no
+     passo 5. Nunca peça ao dev para criar a pasta na Central e esperar.
    - **Responsável:** "Quem recebe os relatos novos?": "Eu mesmo" ou "Outra pessoa" (nome ou
      e-mail; precisa editar a pasta).
    - **Nome do SaaS** nas tarefas ("usuário do <nome>"), com o que você achou como primeira opção.
@@ -277,8 +268,12 @@ precisar perguntar a quem relatou**. Leia `referencia.md` §E.
    }
    ```
 
-   Mostre o que a simulação descreveu (pasta, listas e status, responsável, origens, modo teste
-   ligado) e pergunte: "Criar agora" ou "Ajustar algo". Confirmado, repita **sem** `dry_run`.
+   Pasta nova: troque `"pasta"` por `"nova_pasta": { "space": "<id ou nome do Space>", "nome":
+   "<nome da pasta>" }`. A pasta nasce junto com as listas, na mesma transação, herdando o
+   compartilhamento do Space.
+
+   Mostre o que a simulação descreveu (pasta, nova ou não, listas e status, responsável,
+   origens, modo teste ligado) e pergunte: "Criar agora" ou "Ajustar algo". Confirmado, repita **sem** `dry_run`.
    Guarde o `codigo` (`cdb_…`, público) e mostre os links das listas. Erros: `problemas.md` §5.
 
 ## Etapa 4 · Implementar

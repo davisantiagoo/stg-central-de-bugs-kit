@@ -4,6 +4,28 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). A versão 
 `plugins/central-de-bugs/.claude-plugin/plugin.json`. Os pacotes `@stg/central-de-bugs*` têm
 versão própria: cada uma é um Release `pacotes-vX.Y.Z` deste repositório, com os três `.tgz`.
 
+## [0.4.0] — 2026-10-13
+
+Só o plugin muda. Os pacotes continuam no Release `pacotes-v0.2.0`. Depende da Central com
+`nova_pasta`, `encerrar_esta_conexao` e o login que retoma a autorização (13/10/2026).
+
+### Plugin `central-de-bugs` 0.4.0
+
+- Login pelo link também no VS Code, no Cursor e no app desktop. Nesses clientes o Claude Code
+  não expõe `authenticate`, e a 0.3.2 acabava mandando o dev ao `/mcp`. O agente agora roda
+  `claude mcp login` em segundo plano: o navegador abre sozinho e o link vai para o chat. Novo
+  `login.md` com o passo a passo, inclusive o binário da extensão quando `claude` não está no
+  PATH.
+- O login é conferido antes da Etapa 1. Fora do terminal, a sessão precisa ser recarregada uma
+  vez para enxergar o login novo, e isso agora acontece antes de qualquer trabalho.
+- Troca de conta sem reiniciar: `claude mcp logout`, link novo e `encerrar_esta_conexao`. A
+  sessão aberta passa a usar a conta nova na chamada seguinte. `pastas_para_central_de_bugs`
+  diz com qual conta o agente está (`voce.email`).
+- Pasta nova: quando nenhuma pasta serve, o agente cria a do SaaS (`nova_pasta`) junto com as
+  listas, em vez de pedir ao dev que a crie e esperar.
+- Regra geral na skill: o que o agente consegue fazer, ele faz. Pedir ao dev um passo manual
+  evitável conta como falha da instalação.
+
 ## [0.3.2] — 2026-10-13
 
 Só o plugin muda. Os pacotes continuam no Release `pacotes-v0.2.0`.

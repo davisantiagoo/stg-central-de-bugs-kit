@@ -27,20 +27,33 @@ no front e Fastify 5 com Node 20.19+ no servidor.
 
 ## Instalar o plugin no Claude Code
 
+O jeito mais curto: no repositório do seu SaaS, cole isto no Claude Code e ele faz o resto.
+
+```
+Quero ligar este SaaS à Central de Bugs da STG. Faça você mesmo, rodando os comandos no terminal:
+1. Instale o plugin: claude plugin marketplace add davisantiagoo/stg-central-de-bugs-kit e claude plugin install central-de-bugs@stg (se o marketplace "stg" já existir, atualize com claude plugin marketplace update stg e claude plugin update central-de-bugs@stg). Se o comando claude não estiver no PATH, use o binário da extensão (~/.vscode/extensions/anthropic.claude-code-*/resources/native-binary/claude).
+2. Ligue a atualização automática: em ~/.claude/plugins/known_marketplaces.json, acrescente "autoUpdate": true na entrada "stg".
+3. Faça meu login na Central seguindo o login.md da skill instalar-central-de-bugs do plugin (pasta skills/instalar-central-de-bugs do plugin instalado): gere o link e me mande. Não me mande rodar /mcp.
+4. No fim, me peça para recarregar a janela e me diga para mandar: /central-de-bugs:instalar-central-de-bugs
+```
+
+Ou à mão:
+
 ```
 /plugin marketplace add davisantiagoo/stg-central-de-bugs-kit
 /plugin install central-de-bugs@stg
 ```
 
 O plugin não carrega segredo nenhum. O MCP da Central (`https://app.stgcompany.com.br/api/mcp`,
-servidor `central-de-bugs` do plugin) conecta por OAuth, com o seu login. Se você já tem o MCP
-da Central configurado à mão (por exemplo `central-stg`), o Claude Code fica com ele e oculta o
-do plugin, porque a URL é a mesma. Se o seu é por token pessoal (PAT), remova-o: PAT não
-concede a instalação. Se é por OAuth, reautentique-o em `/mcp` para autorizar o escopo
-`central-de-bugs:instalar`. Você precisa de:
+servidor `central-de-bugs` do plugin) conecta por OAuth, com o seu login: o agente gera o link,
+você clica. Na tela de autorização, "Não é você?" troca de conta sem perder o pedido. Se você já
+tem o MCP da Central configurado à mão (por exemplo `central-stg`), o Claude Code fica com ele e
+oculta o do plugin, porque a URL é a mesma. Se o seu é por token pessoal (PAT), remova-o: PAT
+não concede a instalação. Você precisa de:
 
 - **conta na Central**, com acesso ao módulo MCP (peça ao administrador da Central);
-- **acesso total** à pasta da Central onde as listas do seu SaaS vão ficar.
+- **acesso total** à pasta da Central onde as listas do seu SaaS vão ficar, **ou** ser gestor
+  com acesso total ao Space: aí o agente cria a pasta do SaaS para você.
 
 Para os pacotes você não precisa de nada: nem conta no GitHub, nem token, nem `.npmrc`.
 
@@ -56,8 +69,8 @@ alterar.
    console, requisições que falharam), ele propõe um **plano de captura**: o contexto do negócio
    no momento do relato, os eventos que antecedem um bug, perguntas extras e as áreas que ficam
    fora do print. Você aprova ou ajusta.
-3. **Conectar à Central.** O navegador abre a Central para o login. Você escolhe a pasta e quem
-   recebe os relatos. As chaves são geradas na sua máquina: a privada vai para o `.env` e nunca é
+3. **Conectar à Central.** O agente manda o link de login da Central. Você escolhe a pasta (ou
+   ele cria uma nova) e quem recebe os relatos. As chaves são geradas na sua máquina: a privada vai para o `.env` e nunca é
    impressa. As listas **Bugs** e **Melhorias** e a conexão são criadas depois do seu ok.
 4. **Implementar.** Widget, plugin Fastify e o plano de captura, com o diff na sua frente. O
    widget ganha o visual do seu SaaS: cores, cantos e fonte vêm das suas variáveis CSS, e o modo
