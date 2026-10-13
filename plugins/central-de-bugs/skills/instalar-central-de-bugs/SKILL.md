@@ -68,6 +68,32 @@ Arquivos de apoio, nesta pasta (`${CLAUDE_SKILL_DIR}`). Leia só a seção que a
 > De você eu vou precisar de: login na Central (abre o navegador), algumas escolhas, colar as
 > variáveis no painel do deploy e mandar um relato de teste em produção.
 
+**Na mesma mensagem, explique como funciona.** Quem entende o desenho reconhece cada etapa
+quando ela chega e não se assusta com o navegador abrindo nem com um 401 no meio do caminho:
+
+> **Como funciona, em quatro pontos**
+>
+> - **Você entra na Central uma vez, pelo navegador.** É o seu login de sempre. A tela de
+>   autorização mostra três permissões: **Instalar a Central de Bugs** é a que me deixa criar
+>   as listas agora; **ver** e **alterar tarefas** servem depois, para corrigir e organizar os
+>   relatos daqui. Eu ajo com as suas permissões, nunca além delas.
+> - **O <SaaS> ganha um par de chaves.** A **privada** fica só no servidor do <SaaS>, no `.env`,
+>   e nem eu a vejo. A **pública** vai para a Central, que passa a reconhecer o <SaaS> por ela.
+> - **Cada relato sai com um passe de 10 minutos.** Quando alguém logado clica em "Bug ou
+>   sugestão", o servidor do <SaaS> confere a sessão que já existe e assina um passe curto com a
+>   chave privada. O widget manda o relato direto para a Central com esse passe, e a Central
+>   confere a assinatura com a pública.
+> - **Por isso o botão só funciona para quem está logado**, e só nos endereços do <SaaS> que você
+>   liberar. Quem relata não precisa de conta na Central: aparece nas tarefas como
+>   "usuário do <SaaS>".
+>
+> Até você liberar, a conexão fica em **modo teste**: os relatos não viram tarefa, só mostram
+> como a tarefa ficaria. Assim a gente testa à vontade, inclusive em produção.
+
+Não troque "passe" por "JWT" nem "token" com o dev, a não ser que ele use o termo primeiro. Se
+ele perguntar algo do desenho no meio da instalação, responda com estes quatro pontos antes de
+seguir.
+
 Crie um checklist com as 7 etapas (a ferramenta de tarefas, se disponível) e mantenha-o em dia.
 
 **Ao começar cada etapa**, mostre onde o dev está e o que vem:
@@ -184,7 +210,12 @@ precisar perguntar a quem relatou**. Leia `referencia.md` §E.
 
 1. **Instalar os pacotes** (`referencia.md` §A). Os três agora: a CLI gera as chaves logo
    abaixo. Confira com `npx central-de-bugs --ajuda`. Se falhar: `problemas.md` §1.
-2. **Login e pastas.** Avise: "vai abrir o navegador para você entrar na Central e autorizar".
+2. **Login e pastas.** Avise antes de chamar:
+
+   > Agora vai abrir o navegador para você entrar na Central. Na tela de autorização, confira
+   > que aparece **"Instalar a Central de Bugs"** e autorize. Depois volte aqui: eu sigo
+   > sozinho e listo as pastas onde você pode instalar.
+
    Chame **`pastas_para_central_de_bugs`**. Se a ferramenta não existir ou o login falhar:
    `problemas.md` §2. Para ler a resposta e tratar pasta que já tem conexão: `problemas.md` §3 e §4.
 3. **Escolhas do dev**, numa AskUserQuestion só:

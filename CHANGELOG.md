@@ -4,6 +4,20 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). A versão 
 `plugins/central-de-bugs/.claude-plugin/plugin.json`. Os pacotes `@stg/central-de-bugs*` têm
 versão própria: cada uma é um Release `pacotes-vX.Y.Z` deste repositório, com os três `.tgz`.
 
+## [0.3.1] — 2026-10-12
+
+Só o plugin muda. Os pacotes continuam no Release `pacotes-v0.2.0`.
+
+### Plugin `central-de-bugs` 0.3.1
+
+- Skill `instalar-central-de-bugs`: a mensagem de abertura ganha um "Como funciona, em quatro
+  pontos", em linguagem de quem instala: o login na Central e as três permissões da tela de
+  autorização, o par de chaves (a privada só no servidor do SaaS), o passe de 10 minutos que o
+  servidor assina para cada relato e por que o botão só funciona para quem está logado, nos
+  endereços liberados. Fecha explicando o modo teste.
+- Etapa 3: o aviso antes do login diz o que conferir na tela de autorização
+  ("Instalar a Central de Bugs") e o que acontece quando o dev volta.
+
 ## [0.3.0] — 2026-10-08
 
 Só o plugin muda. Os pacotes continuam no Release `pacotes-v0.2.0`.
