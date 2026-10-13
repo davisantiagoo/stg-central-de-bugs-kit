@@ -65,11 +65,11 @@ Arquivos de apoio, nesta pasta (`${CLAUDE_SKILL_DIR}`). Leia só a seção que a
 > 6. **Testar localmente**: um bug de teste num simulador da Central
 > 7. **Publicar e testar em produção**: deploy, relato real e ativação
 >
-> De você eu vou precisar de: login na Central (abre o navegador), algumas escolhas, colar as
+> De você eu vou precisar de: login na Central (eu te mando o link), algumas escolhas, colar as
 > variáveis no painel do deploy e mandar um relato de teste em produção.
 
 **Na mesma mensagem, explique como funciona.** Quem entende o desenho reconhece cada etapa
-quando ela chega e não se assusta com o navegador abrindo nem com um 401 no meio do caminho:
+quando ela chega e não se assusta com o link de login nem com um 401 no meio do caminho:
 
 > **Como funciona, em quatro pontos**
 >
@@ -210,14 +210,40 @@ precisar perguntar a quem relatou**. Leia `referencia.md` §E.
 
 1. **Instalar os pacotes** (`referencia.md` §A). Os três agora: a CLI gera as chaves logo
    abaixo. Confira com `npx central-de-bugs --ajuda`. Se falhar: `problemas.md` §1.
-2. **Login e pastas.** Avise antes de chamar:
+2. **Login e pastas.** O login é seu de ponta a ponta: o dev só clica num link. Nunca mande
+   ele rodar `/mcp`, nunca diga que "esta sessão não consegue abrir o OAuth" e nunca pare a
+   instalação por causa do login sem antes ter tentado o caminho abaixo.
 
-   > Agora vai abrir o navegador para você entrar na Central. Na tela de autorização, confira
-   > que aparece **"Instalar a Central de Bugs"** e autorize. Depois volte aqui: eu sigo
-   > sozinho e listo as pastas onde você pode instalar.
+   **a) Já está logado?** Procure `pastas_para_central_de_bugs` (se não estiver na lista de
+   ferramentas, busque com ToolSearch, consulta `pastas_para_central_de_bugs`). Se ela existe,
+   chame direto e não fale de login: siga para a leitura das pastas.
 
-   Chame **`pastas_para_central_de_bugs`**. Se a ferramenta não existir ou o login falhar:
-   `problemas.md` §2. Para ler a resposta e tratar pasta que já tem conexão: `problemas.md` §3 e §4.
+   **b) Não está: gere o link você mesmo.** Quando um servidor MCP pede login, o Claude Code
+   expõe no lugar das ferramentas dele uma ferramenta `authenticate`. Procure com ToolSearch,
+   consulta `authenticate`, e use a do servidor da Central: a do plugin é
+   `mcp__plugin_central-de-bugs_central-de-bugs__authenticate`; se o dev tem um MCP da Central
+   configurado à mão (`central-stg` ou outro nome), é a desse servidor. Chame-a. Ela devolve a
+   URL de autorização. Mande ao dev **o link pronto, clicável**, com esta mensagem:
+
+   > Para conectar à Central, abra este link e entre com o seu login de sempre:
+   >
+   > **[Entrar na Central](<url>)**
+   >
+   > Na tela de autorização, confira que aparece **"Instalar a Central de Bugs"** e autorize.
+   > Depois é só me dizer "pronto": eu sigo sozinho e listo as pastas.
+
+   Se a ferramenta disser que a autenticação foi concluída em silêncio, não mande link nenhum:
+   siga para `pastas_para_central_de_bugs`.
+
+   **c) Depois do "pronto".** Numa sessão local o navegador volta para
+   `http://localhost:<porta>/callback` e o Claude Code conclui sozinho: busque de novo
+   `pastas_para_central_de_bugs` e chame. Se o dev disser que a página final deu erro de
+   conexão (sessão remota), peça a URL inteira da barra de endereço e passe-a como
+   `callback_url` para a ferramenta `complete_authentication` do mesmo servidor.
+
+   Se não existir `authenticate` nem as ferramentas da Central, ou se o login falhar:
+   `problemas.md` §2. Para ler a resposta e tratar pasta que já tem conexão: `problemas.md` §3
+   e §4.
 3. **Escolhas do dev**, numa AskUserQuestion só:
    - **Pasta:** "Em qual pasta da Central ficam os bugs do <SaaS>?". Até 4 pastas com
      `podeInstalar: true`, primeiro as que têm o nome do SaaS, com o `caminho` como rótulo.

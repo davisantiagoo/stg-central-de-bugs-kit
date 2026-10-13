@@ -13,8 +13,15 @@ Explique ao dev em uma ou duas frases, sem despejar a tabela inteira.
 
 ## 2. A ferramenta `pastas_para_central_de_bugs` não aparece ou o login falha
 
-- **O servidor `central-de-bugs` não está conectado ou pede autenticação:** peça ao dev para
-  rodar `/mcp`, escolher `plugin:central-de-bugs:central-de-bugs` e autenticar.
+- **O servidor pede autenticação:** não mande o dev para o `/mcp`. Gere o link com a
+  ferramenta `authenticate` do servidor (SKILL.md, Etapa 3, passo 2). Só se ela devolver erro
+  ("Failed to start OAuth flow"), diga o erro em uma frase e aí sim peça o `/mcp`, escolhendo o
+  servidor da Central e *Authenticate*.
+- **Nem as ferramentas da Central nem `authenticate` aparecem:** o servidor da Central está
+  desligado neste projeto. Isso acontece quando o dev tem um MCP da Central configurado à mão
+  (`central-stg`, por exemplo) e o desligou aqui: o do plugin some junto, porque o Claude Code
+  trata os dois como o mesmo servidor (mesma URL). Peça para religar, em uma frase: "digite
+  `/mcp`, escolha `<nome>` e *Enable*". Depois disso as ferramentas aparecem sem novo login.
 - **O dev já tinha o MCP da Central configurado à mão** (um `central-stg`, ou outro nome, com a
   URL `https://app.stgcompany.com.br/api/mcp`): o Claude Code reconhece duplicata pela URL e
   fica com o manual, que pode ter sido autorizado sem o escopo `central-de-bugs:instalar`.

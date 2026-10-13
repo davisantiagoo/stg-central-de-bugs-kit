@@ -4,6 +4,21 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). A versão 
 `plugins/central-de-bugs/.claude-plugin/plugin.json`. Os pacotes `@stg/central-de-bugs*` têm
 versão própria: cada uma é um Release `pacotes-vX.Y.Z` deste repositório, com os três `.tgz`.
 
+## [0.3.2] — 2026-10-13
+
+Só o plugin muda. Os pacotes continuam no Release `pacotes-v0.2.0`.
+
+### Plugin `central-de-bugs` 0.3.2
+
+- Skill `instalar-central-de-bugs`, Etapa 3: o login na Central não manda mais o dev rodar
+  `/mcp`. Se o MCP pede autenticação, o agente chama a ferramenta `authenticate` que o Claude
+  Code expõe para o servidor e entrega o link de login pronto, clicável. Já logado, segue direto
+  para as pastas sem falar de login. Sessão remota: o agente pede a URL de retorno e conclui
+  com `complete_authentication`.
+- `problemas.md` §2: o `/mcp` virou último recurso, só quando `authenticate` falha. Novo caso:
+  MCP da Central configurado à mão e desligado no projeto esconde também o do plugin (mesma
+  URL); a correção é religá-lo, sem novo login.
+
 ## [0.3.1] — 2026-10-12
 
 Só o plugin muda. Os pacotes continuam no Release `pacotes-v0.2.0`.
