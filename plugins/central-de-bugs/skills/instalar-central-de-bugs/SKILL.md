@@ -158,6 +158,8 @@ Só leitura. Descubra:
   fonte carregada no `index.html` ou no CSS global. Veja também **como o modo escuro liga**:
   uma classe no `<html>` (qual?), um atributo (`data-theme`), um estado em JS, só o sistema, ou
   nenhum. E se há algo flutuante no canto inferior direito (chat, botão de ajuda).
+- **Idioma:** se o SaaS é multilíngue (i18next, react-intl, store próprio), de onde vem o idioma
+  da pessoa. O widget acompanha (`idioma`, `referencia.md` §D); sem i18n, fica em pt-BR.
 - **Já instalado?** `@stg/central-de-bugs` no `package.json` ou `CENTRAL_DE_BUGS_` no
   `.env.example`. Se sim, diga ao dev e pergunte o que ele quer refazer, em vez de duplicar.
 
@@ -299,6 +301,8 @@ Prepare tudo e mostre de uma vez, arquivo por arquivo, com o diff:
    > | modo escuro | acompanha a classe `dark` do `<html>` |
 
    O contraste é medido na Etapa 6, com as cores de verdade.
+5. **O idioma do <SaaS>**, se ele for multilíngue: `idioma` ligado ao idioma que a pessoa
+   escolheu no SaaS (`referencia.md` §D), para o botão trocar junto com a tela.
 
 Pergunte: **"Aplicar tudo"**, **"Revisar arquivo por arquivo"** ou **"Quero ajustar"**. Aplique
 só o aprovado. Se o projeto tiver typecheck ou lint, rode-os nos arquivos tocados e corrija o que

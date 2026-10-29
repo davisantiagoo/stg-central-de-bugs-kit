@@ -5,25 +5,25 @@ modelos de código e as regras de cada peça. Leia só a seção que a etapa ped
 
 ## A. Pacotes
 
-São `.tgz` públicos, anexados ao Release `pacotes-v0.2.0` do repositório
+São `.tgz` públicos, anexados ao Release `pacotes-v0.3.0` do repositório
 `davisantiagoo/stg-central-de-bugs-kit`. Instalam pela URL, **sem token, sem `.npmrc` e sem
 registry**.
 
 | Pacote | Onde | URL |
 | --- | --- | --- |
-| `@stg/central-de-bugs` | front | `https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.2.0/stg-central-de-bugs-0.2.0.tgz` |
-| `@stg/central-de-bugs-fastify` | servidor | `https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.2.0/stg-central-de-bugs-fastify-0.2.0.tgz` |
-| `@stg/central-de-bugs-cli` | dev (devDependency) | `https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.2.0/stg-central-de-bugs-cli-0.2.0.tgz` |
+| `@stg/central-de-bugs` | front | `https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.3.0/stg-central-de-bugs-0.3.0.tgz` |
+| `@stg/central-de-bugs-fastify` | servidor | `https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.3.0/stg-central-de-bugs-fastify-0.3.0.tgz` |
+| `@stg/central-de-bugs-cli` | dev (devDependency) | `https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.3.0/stg-central-de-bugs-cli-0.3.0.tgz` |
 
 Com npm:
 
 ```bash
 # no workspace do front
-npm install https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.2.0/stg-central-de-bugs-0.2.0.tgz
+npm install https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.3.0/stg-central-de-bugs-0.3.0.tgz
 # no workspace do servidor
-npm install https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.2.0/stg-central-de-bugs-fastify-0.2.0.tgz
+npm install https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.3.0/stg-central-de-bugs-fastify-0.3.0.tgz
 # onde fica mais à mão, normalmente na raiz ou no servidor
-npm install -D https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.2.0/stg-central-de-bugs-cli-0.2.0.tgz
+npm install -D https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.3.0/stg-central-de-bugs-cli-0.3.0.tgz
 ```
 
 Num repositório de um pacote só (front e servidor juntos), junte os dois primeiros:
@@ -131,8 +131,15 @@ const CENTRAL = import.meta.env.VITE_CENTRAL_DE_BUGS_URL
 ```
 
 Props: `conexao`, `central`, `token` (obrigatórias), `contexto`, `perguntas`, `versao`, `tela`,
-`raizDoPrint`, `posicao` (`'direita' | 'esquerda'`), `textos` e `tema`. O visual (`tema`, `posicao`)
+`raizDoPrint`, `posicao` (`'direita' | 'esquerda'`), `idioma`, `textos` e `tema`. O visual (`tema`, `posicao`)
 está na seção F.
+
+**Idioma (pacotes 0.3.0).** `idioma` muda tudo o que a pessoa lê no widget, inclusive datas, e
+vai no contexto do relato; a tarefa na Central continua em português. O kit traz pt-BR, en, es,
+fr, de, it, pl, tr, hi e id; outro idioma cai no inglês; sem a prop, pt-BR. Se o SaaS já tem um
+idioma escolhido pela pessoa (i18next, react-intl, um store), passe esse, e o widget troca junto
+quando ela muda: `idioma={i18n.resolvedLanguage}`. Sem i18n no SaaS, `idioma="navegador"` segue
+o navegador. `textos` continua valendo por cima da tradução.
 
 `tela` e `raizDoPrint` são **funções**, não valores: o widget as chama na hora do relato.
 

@@ -4,6 +4,33 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). A versão 
 `plugins/central-de-bugs/.claude-plugin/plugin.json`. Os pacotes `@stg/central-de-bugs*` têm
 versão própria: cada uma é um Release `pacotes-vX.Y.Z` deste repositório, com os três `.tgz`.
 
+## [0.4.1] — 2026-10-29
+
+Pacotes novos no Release `pacotes-v0.3.0` e o plugin acompanhando.
+
+### Pacotes (Release `pacotes-v0.3.0`)
+
+- `stg-central-de-bugs-0.3.0.tgz`, `stg-central-de-bugs-fastify-0.3.0.tgz` e
+  `stg-central-de-bugs-cli-0.3.0.tgz`. Os quatro pacotes (contrato incluído) sobem juntos para a
+  0.3.0.
+- **Widget em 10 idiomas.** Nova prop `idioma` (`'en'`, `'de'`, `'pt-BR'`, `'en-US'`… ou
+  `'navegador'`). Tudo o que a pessoa lê muda de idioma, inclusive as opções de impacto e
+  frequência, a validação, os anexos, "Também vai junto", "Meus relatos", os nomes de status e as
+  datas. O kit traz pt-BR, en, es, fr, de, it, pl, tr, hi e id; outro idioma cai no inglês.
+  `textos` continua valendo por cima da tradução.
+- **Sem `idioma`, nada muda:** o widget continua em pt-BR. A única diferença visível é a
+  maiúscula no título da confirmação ("Recebido — Bug #12").
+- **Contrato:** `contexto.idioma` (opcional) leva o idioma de quem relata. A Central de antes o
+  descarta; a de depois o usa para devolver a resposta da equipe traduzida.
+- A tarefa, o registro técnico e os avisos de console continuam em português. Noutro idioma, uma
+  frase de erro que vem do servidor (em português) vira o aviso traduzido.
+
+### Plugin `central-de-bugs` 0.4.1
+
+- Skill `instalar-central-de-bugs`: instala os pacotes 0.3.0, descobre na Etapa 1 se o SaaS é
+  multilíngue e, na Etapa 4, liga `idioma` ao idioma que a pessoa escolheu no SaaS.
+- `docs/guia.md`: versão 0.3.0 no passo 1 e a prop `idioma` na tabela do widget.
+
 ## [0.4.0] — 2026-10-13
 
 Só o plugin muda. Os pacotes continuam no Release `pacotes-v0.2.0`. Depende da Central com

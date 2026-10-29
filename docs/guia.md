@@ -37,10 +37,10 @@ Este bloco é o **único lugar do guia** com a versão. Cole-o no terminal antes
 trocar de versão, troque só ele.
 
 ```bash
-# Versão atual dos pacotes da Central de Bugs: 0.2.0 (Release pacotes-v0.2.0)
-CDB_WIDGET=https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.2.0/stg-central-de-bugs-0.2.0.tgz
-CDB_FASTIFY=https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.2.0/stg-central-de-bugs-fastify-0.2.0.tgz
-CDB_CLI=https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.2.0/stg-central-de-bugs-cli-0.2.0.tgz
+# Versão atual dos pacotes da Central de Bugs: 0.3.0 (Release pacotes-v0.3.0)
+CDB_WIDGET=https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.3.0/stg-central-de-bugs-0.3.0.tgz
+CDB_FASTIFY=https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.3.0/stg-central-de-bugs-fastify-0.3.0.tgz
+CDB_CLI=https://github.com/davisantiagoo/stg-central-de-bugs-kit/releases/download/pacotes-v0.3.0/stg-central-de-bugs-cli-0.3.0.tgz
 ```
 
 | Variável | Pacote | O que é |
@@ -209,6 +209,7 @@ const CENTRAL = import.meta.env.VITE_CENTRAL_DE_BUGS_URL
 | `tela` | — | `() => string`, o nome legível da tela ("Pedidos › #812"). Padrão: o título da página |
 | `raizDoPrint` | — | `() => HTMLElement \| null`, o elemento fotografado. Padrão: o `body` |
 | `posicao` | — | `'direita'` (padrão) ou `'esquerda'` |
+| `idioma` | — | o idioma de quem usa o SaaS (`'en'`, `'de'`, `'pt-BR'`, `'en-US'`…) ou `'navegador'`. Muda tudo o que a pessoa lê, inclusive as datas, e vai no contexto do relato. O kit traz pt-BR, en, es, fr, de, it, pl, tr, hi e id; outro idioma cai no inglês. Sem a prop, pt-BR. A tarefa na Central continua em português |
 | `textos` | — | `Partial<Textos>`, para trocar qualquer texto do widget (veja `TEXTOS_PADRAO`) |
 | `tema` | — | `Partial<Tema>`: cores, `raio`, `fonte`, `zIndex` e `esquema` (`'auto' \| 'claro' \| 'escuro'`) |
 
